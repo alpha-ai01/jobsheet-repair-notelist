@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartRepair - ระบบจัดการงานซ่อม</title>
+    <!-- Tailwind CSS (ช่วยจัด UI ให้สวยทันสมัย) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Library สำหรับสแกน บาร์โค้ด / QR Code -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans p-4">
+
+    <div class="max-w-md mx-auto space-y-4">
+
+        <!-- 🔹 Header Bar -->
+        <header class="bg-slate-900 text-white p-4 rounded-2xl shadow-lg text-center">
+            <h1 class="text-xl font-bold tracking-wide">🛠️ SmartRepair</h1>
+            <p class="text-xs text-slate-400 mt-1">ระบบบันทึกและแจ้งใบเสร็จงานซ่อม</p>
+        </header>
+
+        <!-- 💳 Card 1: บันทึกงานซ่อมใหม่ -->
+        <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
+            <h2 class="text-md font-semibold text-slate-700 border-b pb-2">📝 บันทึกงานซ่อมใหม่</h2>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">ชื่อลูกค้า</label>
+                <input type="text" id="txt_name" placeholder="กรอกชื่อลูกค้า" 
+                    class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">เบอร์โทรศัพท์ (ใช้เป็น Tag)</label>
+                <input type="tel" id="txt_phone" placeholder="08XXXXXXXX" 
+                    class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">รุ่นโทรศัพท์ / เลข IMEI</label>
+                <div class="flex gap-2">
+                    <input type="text" id="txt_model" placeholder="กรอกรุ่น หรือสแกน IMEI" 
+                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    <button onclick="startScan()" 
+                        class="bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-medium hover:bg-slate-700 transition flex items-center gap-1 whitespace-nowrap">
+                        📷 สแกน
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">อาการเสีย</label>
+                <input type="text" id="txt_issue" placeholder="ระบุอาการเสีย" 
+                    class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">ราคาประเมิน (บาท)</label>
+                <input type="number" id="txt_price" placeholder="0.00" 
+                    class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+            </div>
+
+            <button onclick="saveData()" 
+                class="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-700 transition shadow-sm mt-2">
+                💾 บันทึกข้อมูล
+            </button>
+        </div>
+
+        <!-- 💳 Card 2: ค้นหางานซ่อม -->
+        <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
+            <h2 class="text-md font-semibold text-slate-700 border-b pb-2">🔍 ค้นหาข้อมูลงานซ่อม</h2>
+
+            <div class="flex gap-2">
+                <input type="tel" id="txt_search_phone" placeholder="กรอกเบอร์โทรเพื่อค้นหา..." 
+                    class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                <button onclick="searchData()" 
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition">
+                    ค้นหา
+                </button>
+            </div>
+
+            <!-- แสดงผลข้อมูลงานซ่อม -->
+            <div class="bg-slate-50 p-3 rounded-xl border space-y-1.5 text-xs text-slate-600 mt-2">
+                <p><strong>👤 ชื่อลูกค้า:</strong> <span id="lbl_name" class="text-slate-800">-</span></p>
+                <p><strong>📱 รุ่น/IMEI:</strong> <span id="lbl_model" class="text-slate-800">-</span></p>
+                <p><strong>🛠️ อาการเสีย:</strong> <span id="lbl_issue" class="text-slate-800">-</span></p>
+                <p><strong>💵 ราคาซ่อม:</strong> <span id="lbl_price" class="text-slate-800">-</span></p>
+            </div>
+        </div>
+
+        <!-- 🟢 ปุ่มการทำงานล่างสุด -->
+        <div class="grid grid-cols-2 gap-3">
+            <button onclick="shareToLine()" 
+                class="bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-xs hover:bg-emerald-600 transition text-center shadow-sm flex items-center justify-center gap-1">
+                📲 ส่งเข้า LINE
+            </button>
+            <button onclick="clearForm()" 
+                class="bg-slate-500 text-white font-semibold py-2.5 rounded-xl text-xs hover:bg-slate-600 transition text-center shadow-sm flex items-center justify-center gap-1">
+                🔄 ล้างข้อมูล
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Modal สำหรับกล้องสแกนบาร์โค้ด -->
+    <div id="scanner_modal" class="fixed inset-0 bg-black/70 hidden flex-col items-center justify-center p-4 z-50">
+        <div class="bg-white p-4 rounded-2xl w-full max-w-sm space-y-3">
+            <h3 class="text-sm font-bold text-slate-700 text-center">สแกนบาร์โค้ด / IMEI</h3>
+            <div id="reader" class="w-full overflow-hidden rounded-xl"></div>
+            <button onclick="stopScan()" class="w-full bg-red-500 text-white py-2 rounded-xl text-xs font-medium">ปิดกล้อง</button>
+        </div>
+    </div>
+
+    <!-- 📜 JavaScript คำสั่งประมวลผล (แทนการต่อบล็อก) -->
+    <script>
+        let html5QrcodeScanner = null;
+
+        // 1. ระบบบันทึกข้อมูล (ทำงานเหมือน TinyDB)
+        function saveData() {
+            const name = document.getElementById('txt_name').value.trim();
+            const phone = document.getElementById('txt_phone').value.trim();
+            const model = document.getElementById('txt_model').value.trim();
+            const issue = document.getElementById('txt_issue').value.trim();
+            const price = document.getElementById('txt_price').value.trim();
+
+            if (!phone) {
+                alert('โปรดกรอกเบอร์โทรศัพท์เพื่อใช้เป็น Tag ในการบันทึก');
+                return;
+            }
+
+            const dataArray = [name, model, issue, price];
+            localStorage.setItem(phone, JSON.stringify(dataArray));
+            alert('บันทึกข้อมูลเรียบร้อย!');
+        }
+
+        // 2. ระบบค้นหาข้อมูล
+        function searchData() {
+            const searchPhone = document.getElementById('txt_search_phone').value.trim();
+            const storedData = localStorage.getItem(searchPhone);
+
+            if (!storedData) {
+                alert('ไม่พบข้อมูลงานซ่อมเบอร์นี้');
+                document.getElementById('lbl_name').innerText = '-';
+                document.getElementById('lbl_model').innerText = '-';
+                document.getElementById('lbl_issue').innerText = '-';
+                document.getElementById('lbl_price').innerText = '-';
+                return;
+            }
+
+            const [name, model, issue, price] = JSON.parse(storedData);
+            document.getElementById('lbl_name').innerText = name || '-';
+            document.getElementById('lbl_model').innerText = model || '-';
+            document.getElementById('lbl_issue').innerText = issue || '-';
+            document.getElementById('lbl_price').innerText = price ? `${price} บาท` : '-';
+        }
+
+        // 3. ระบบส่งข้อมูลเข้า LINE
+        function shareToLine() {
+            const name = document.getElementById('lbl_name').innerText;
+            const model = document.getElementById('lbl_model').innerText;
+            const issue = document.getElementById('lbl_issue').innerText;
+            const price = document.getElementById('lbl_price').innerText;
+
+            if (name === '-') {
+                alert('โปรดค้นหาข้อมูลงานซ่อมก่อนกดส่ง LINE');
+                return;
+            }
+
+            const message = `🧾 ใบเสร็จแจ้งงานซ่อม\n👤 ชื่อลูกค้า: ${name}\n📱 รุ่น/IMEI: ${model}\n🛠️ อาการเสีย: ${issue}\n💵 ราคาซ่อม: ${price}`;
+            const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(message)}`;
+            window.open(lineUrl, '_blank');
+        }
+
+        // 4. ระบบล้างข้อมูลบนหน้าจอ
+        function clearForm() {
+            document.getElementById('txt_name').value = '';
+            document.getElementById('txt_phone').value = '';
+            document.getElementById('txt_model').value = '';
+            document.getElementById('txt_issue').value = '';
+            document.getElementById('txt_price').value = '';
+            document.getElementById('txt_search_phone').value = '';
+
+            document.getElementById('lbl_name').innerText = '-';
+            document.getElementById('lbl_model').innerText = '-';
+            document.getElementById('lbl_issue').innerText = '-';
+            document.getElementById('lbl_price').innerText = '-';
+        }
+
+        // 5. ระบบเปิดกล้องสแกนบาร์โค้ด
+        function startScan() {
+            document.getElementById('scanner_modal').classList.remove('hidden');
+            document.getElementById('scanner_modal').classList.add('flex');
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 150 } },
+                (decodedText) => {
+                    document.getElementById('txt_model').value = decodedText;
+                    stopScan();
+                },
+                () => {}
+            );
+        }
+
+        function stopScan() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    document.getElementById('scanner_modal').classList.add('hidden');
+                    document.getElementById('scanner_modal').classList.remove('flex');
+                });
+            } else {
+                document.getElementById('scanner_modal').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
