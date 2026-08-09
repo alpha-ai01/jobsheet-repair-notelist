@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartRepair - ระบบจัดการงานซ่อม</title>
-    <!-- Tailwind CSS (ช่วยจัด UI ให้สวยทันสมัย) -->
+    <title>SmartRepair - ระบบจัดการงานซ่อม (Firebase)</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Library สำหรับสแกน บาร์โค้ด / QR Code -->
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -14,89 +14,185 @@
     <div class="max-w-md mx-auto space-y-4">
 
         <!-- 🔹 Header Bar -->
-        <header class="bg-slate-900 text-white p-4 rounded-2xl shadow-lg text-center">
-            <h1 class="text-xl font-bold tracking-wide">🛠️ SmartRepair</h1>
-            <p class="text-xs text-slate-400 mt-1">ระบบบันทึกและแจ้งใบเสร็จงานซ่อม</p>
+        <header class="bg-slate-900 text-white p-4 rounded-2xl shadow-lg flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold tracking-wide">🛠️ SmartRepair</h1>
+                <p class="text-xs text-slate-400 mt-0.5">ระบบบันทึกงานซ่อมออนไลน์ (Firebase Cloud)</p>
+            </div>
+            <!-- ปุ่ม Logout แสดงเมื่อเข้าสู่ระบบแล้ว -->
+            <div id="user_profile" class="hidden text-right">
+                <span id="lbl_username" class="block text-xs font-semibold text-emerald-400">👤 User</span>
+                <button onclick="logout()" class="text-[11px] text-red-400 hover:text-red-300 underline mt-0.5">
+                    🚪 ออกจากระบบ
+                </button>
+            </div>
         </header>
 
-        <!-- 💳 Card 1: บันทึกงานซ่อมใหม่ -->
-        <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
-            <h2 class="text-md font-semibold text-slate-700 border-b pb-2">📝 บันทึกงานซ่อมใหม่</h2>
-
-            <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">ชื่อลูกค้า</label>
-                <input type="text" id="txt_name" placeholder="กรอกชื่อลูกค้า" 
-                    class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-            </div>
-
-            <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">เบอร์โทรศัพท์ (ใช้เป็น Tag)</label>
-                <input type="tel" id="txt_phone" placeholder="08XXXXXXXX" 
-                    class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-            </div>
-
-            <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">รุ่นโทรศัพท์ / เลข IMEI</label>
-                <div class="flex gap-2">
-                    <input type="text" id="txt_model" placeholder="กรอกรุ่น หรือสแกน IMEI" 
-                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                    <button onclick="startScan()" 
-                        class="bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-medium hover:bg-slate-700 transition flex items-center gap-1 whitespace-nowrap">
-                        📷 สแกน
-                    </button>
+        <!-- 🔒 CARD 0: หน้าเข้าสู่ระบบ (Login Section) -->
+        <div id="login_card" class="bg-white p-6 rounded-2xl shadow-md border border-slate-200/80 space-y-4">
+            <div class="text-center space-y-1">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-50 text-blue-600 mb-1 text-xl">
+                    🔐
                 </div>
+                <h2 class="text-lg font-bold text-slate-800">เข้าสู่ระบบ</h2>
+                <p class="text-xs text-slate-500">กรุณากรอกชื่อผู้ใช้งานและรหัสผ่านเพื่อเริ่มใช้งาน</p>
             </div>
 
-            <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">อาการเสีย</label>
-                <input type="text" id="txt_issue" placeholder="ระบุอาการเสีย" 
-                    class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-            </div>
+            <div id="login_error" class="hidden bg-red-50 text-red-600 text-xs p-2.5 rounded-xl border border-red-200 text-center"></div>
 
-            <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">ราคาประเมิน (บาท)</label>
-                <input type="number" id="txt_price" placeholder="0.00" 
-                    class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-            </div>
+            <form onsubmit="handleLogin(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อผู้ใช้งาน หรือ อีเมล</label>
+                    <input type="text" id="txt_username" placeholder="เช่น admin หรือ admin@email.com" required
+                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                </div>
 
-            <button onclick="saveData()" 
-                class="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-700 transition shadow-sm mt-2">
-                💾 บันทึกข้อมูล
-            </button>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">รหัสผ่าน (Password)</label>
+                    <input type="password" id="txt_password" placeholder="กรอก Password" required
+                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                </div>
+
+                <button type="submit" id="btn_login"
+                    class="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-700 transition shadow-sm mt-2">
+                    🔑 เข้าสู่ระบบ
+                </button>
+            </form>
+
+            <div class="text-center border-t pt-3">
+                <p class="text-xs text-slate-500">ยังไม่มีบัญชีผู้ใช้งาน? 
+                    <button onclick="toggleAuthMode('register')" class="text-blue-600 font-semibold hover:underline">สมัครสมาชิกที่นี่</button>
+                </p>
+            </div>
         </div>
 
-        <!-- 💳 Card 2: ค้นหางานซ่อม -->
-        <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
-            <h2 class="text-md font-semibold text-slate-700 border-b pb-2">🔍 ค้นหาข้อมูลงานซ่อม</h2>
+        <!-- 📝 CARD 0.5: หน้าสมัครสมาชิก (Register Section) -->
+        <div id="register_card" class="hidden bg-white p-6 rounded-2xl shadow-md border border-slate-200/80 space-y-4">
+            <div class="text-center space-y-1">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 mb-1 text-xl">
+                    📝
+                </div>
+                <h2 class="text-lg font-bold text-slate-800">สมัครสมาชิกใหม่</h2>
+                <p class="text-xs text-slate-500">สร้างบัญชีผู้ใช้ใหม่ในระบบ Firebase</p>
+            </div>
 
-            <div class="flex gap-2">
-                <input type="tel" id="txt_search_phone" placeholder="กรอกเบอร์โทรเพื่อค้นหา..." 
-                    class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
-                <button onclick="searchData()" 
-                    class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition">
-                    ค้นหา
+            <div id="register_error" class="hidden bg-red-50 text-red-600 text-xs p-2.5 rounded-xl border border-red-200 text-center"></div>
+
+            <form onsubmit="handleRegister(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อผู้ใช้งาน หรือ อีเมล</label>
+                    <input type="text" id="reg_username" placeholder="ตั้งชื่อ Username" required
+                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)</label>
+                    <input type="password" id="reg_password" placeholder="ตั้ง Password" required minlength="6"
+                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">ยืนยันรหัสผ่าน</label>
+                    <input type="password" id="reg_confirm_password" placeholder="กรอก Password อีกครั้ง" required minlength="6"
+                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                </div>
+
+                <button type="submit" id="btn_register"
+                    class="w-full bg-emerald-600 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-emerald-700 transition shadow-sm mt-2">
+                    ✨ ลงทะเบียนสมัครสมาชิก
+                </button>
+            </form>
+
+            <div class="text-center border-t pt-3">
+                <p class="text-xs text-slate-500">มีบัญชีผู้ใช้งานอยู่แล้ว? 
+                    <button onclick="toggleAuthMode('login')" class="text-emerald-600 font-semibold hover:underline">เข้าสู่ระบบ</button>
+                </p>
+            </div>
+        </div>
+
+        <!-- 🚀 MAIN CONTENT (ส่วนระบบงานซ่อม - จะแสดงเมื่อ Login แล้ว) -->
+        <div id="main_content" class="space-y-4 hidden">
+
+            <!-- 💳 Card 1: บันทึกงานซ่อมใหม่ -->
+            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
+                <h2 class="text-md font-semibold text-slate-700 border-b pb-2">📝 บันทึกงานซ่อมใหม่ (Cloud)</h2>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">ชื่อลูกค้า</label>
+                    <input type="text" id="txt_name" placeholder="กรอกชื่อลูกค้า" 
+                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">เบอร์โทรศัพท์ (ใช้เป็น รหัสค้นหา)</label>
+                    <input type="tel" id="txt_phone" placeholder="08XXXXXXXX" 
+                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">รุ่นโทรศัพท์ / เลข IMEI</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="txt_model" placeholder="กรอกรุ่น หรือสแกน IMEI" 
+                            class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                        <button onclick="startScan()" 
+                            class="bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-medium hover:bg-slate-700 transition flex items-center gap-1 whitespace-nowrap">
+                            📷 สแกน
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">อาการเสีย</label>
+                    <input type="text" id="txt_issue" placeholder="ระบุอาการเสีย" 
+                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">ราคาประเมิน (บาท)</label>
+                    <input type="number" id="txt_price" placeholder="0.00" 
+                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                </div>
+
+                <button onclick="saveData()" id="btn_save"
+                    class="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-700 transition shadow-sm mt-2">
+                    💾 บันทึกข้อมูลเข้า Firebase
                 </button>
             </div>
 
-            <!-- แสดงผลข้อมูลงานซ่อม -->
-            <div class="bg-slate-50 p-3 rounded-xl border space-y-1.5 text-xs text-slate-600 mt-2">
-                <p><strong>👤 ชื่อลูกค้า:</strong> <span id="lbl_name" class="text-slate-800">-</span></p>
-                <p><strong>📱 รุ่น/IMEI:</strong> <span id="lbl_model" class="text-slate-800">-</span></p>
-                <p><strong>🛠️ อาการเสีย:</strong> <span id="lbl_issue" class="text-slate-800">-</span></p>
-                <p><strong>💵 ราคาซ่อม:</strong> <span id="lbl_price" class="text-slate-800">-</span></p>
-            </div>
-        </div>
+            <!-- 💳 Card 2: ค้นหางานซ่อม -->
+            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
+                <h2 class="text-md font-semibold text-slate-700 border-b pb-2">🔍 ค้นหาข้อมูลงานซ่อม</h2>
 
-        <!-- 🟢 ปุ่มการทำงานล่างสุด -->
-        <div class="grid grid-cols-2 gap-3">
-            <button onclick="shareToLine()" 
-                class="bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-xs hover:bg-emerald-600 transition text-center shadow-sm flex items-center justify-center gap-1">
-                📲 ส่งเข้า LINE
-            </button>
-            <button onclick="clearForm()" 
-                class="bg-slate-500 text-white font-semibold py-2.5 rounded-xl text-xs hover:bg-slate-600 transition text-center shadow-sm flex items-center justify-center gap-1">
-                🔄 ล้างข้อมูล
-            </button>
+                <div class="flex gap-2">
+                    <input type="tel" id="txt_search_phone" placeholder="กรอกเบอร์โทรเพื่อค้นหา..." 
+                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                    <button onclick="searchData()" id="btn_search"
+                        class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition whitespace-nowrap">
+                        ค้นหา
+                    </button>
+                </div>
+
+                <!-- แสดงผลข้อมูลงานซ่อม -->
+                <div class="bg-slate-50 p-3 rounded-xl border space-y-1.5 text-xs text-slate-600 mt-2">
+                    <p><strong>👤 ชื่อลูกค้า:</strong> <span id="lbl_name" class="text-slate-800">-</span></p>
+                    <p><strong>📱 รุ่น/IMEI:</strong> <span id="lbl_model" class="text-slate-800">-</span></p>
+                    <p><strong>🛠️ อาการเสีย:</strong> <span id="lbl_issue" class="text-slate-800">-</span></p>
+                    <p><strong>💵 ราคาซ่อม:</strong> <span id="lbl_price" class="text-slate-800">-</span></p>
+                </div>
+            </div>
+
+            <!-- 🟢 ปุ่มการทำงานล่างสุด -->
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="shareToLine()" 
+                    class="bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-xs hover:bg-emerald-600 transition text-center shadow-sm flex items-center justify-center gap-1">
+                    📲 ส่งเข้า LINE
+                </button>
+                <button onclick="clearForm()" 
+                    class="bg-slate-500 text-white font-semibold py-2.5 rounded-xl text-xs hover:bg-slate-600 transition text-center shadow-sm flex items-center justify-center gap-1">
+                    🔄 ล้างข้อมูล
+                </button>
+            </div>
+
         </div>
 
     </div>
@@ -110,51 +206,220 @@
         </div>
     </div>
 
-    <!-- 📜 JavaScript คำสั่งประมวลผล (แทนการต่อบล็อก) -->
-    <script>
+    <!-- 📜 Firebase JS SDK (v10 Module) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            signOut, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            getDoc 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // ==========================================
+        // 🔹 ค่า FIREBASE CONFIG ของโปรเจกต์คุณ
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCZE5VddalQi8ME7vSLDPZjEABno-3ZH5Q",
+            authDomain: "smart-repair-app-feff0.firebaseapp.com",
+            projectId: "smart-repair-app-feff0",
+            storageBucket: "smart-repair-app-feff0.firebasestorage.app",
+            messagingSenderId: "752753802805",
+            appId: "1:752753802805:web:a213e8f39e6e5723563b7c",
+            measurementId: "G-CD7NPK1F85"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
         let html5QrcodeScanner = null;
 
-        // 1. ระบบบันทึกข้อมูล (ทำงานเหมือน TinyDB)
-        function saveData() {
+        // แปลง Username ทั่วไปเป็นรูปแบบ Email เพื่อส่งเข้า Firebase Auth
+        function formatEmail(input) {
+            return input.includes('@') ? input : `${input}@smartrepair.local`;
+        }
+
+        // --- 1. ตรวจสอบสถานะการเข้าสู่ระบบอัตโนมัติ ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const displayName = user.email.replace('@smartrepair.local', '');
+                document.getElementById('login_card').classList.add('hidden');
+                document.getElementById('register_card').classList.add('hidden');
+                document.getElementById('main_content').classList.remove('hidden');
+                document.getElementById('user_profile').classList.remove('hidden');
+                document.getElementById('lbl_username').innerText = `👤 ${displayName}`;
+            } else {
+                window.toggleAuthMode('login');
+                document.getElementById('main_content').classList.add('hidden');
+                document.getElementById('user_profile').classList.add('hidden');
+            }
+        });
+
+        // --- 2. ฟังก์ชันสลับหน้า Login / Register ---
+        window.toggleAuthMode = function(mode) {
+            document.getElementById('login_error').classList.add('hidden');
+            document.getElementById('register_error').classList.add('hidden');
+
+            if (mode === 'register') {
+                document.getElementById('login_card').classList.add('hidden');
+                document.getElementById('register_card').classList.remove('hidden');
+            } else {
+                document.getElementById('register_card').classList.add('hidden');
+                document.getElementById('login_card').classList.remove('hidden');
+            }
+        };
+
+        // --- 3. ระบบสมัครสมาชิก (Register) ---
+        window.handleRegister = async function(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('reg_username').value.trim();
+            const passwordInput = document.getElementById('reg_password').value.trim();
+            const confirmPassword = document.getElementById('reg_confirm_password').value.trim();
+            const errorElement = document.getElementById('register_error');
+            const btn = document.getElementById('btn_register');
+
+            if (passwordInput !== confirmPassword) {
+                errorElement.innerText = '❌ รหัสผ่านทั้งสองช่องไม่ตรงกัน!';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                btn.innerText = '⏳ กำลังลงทะเบียน...';
+                btn.disabled = true;
+
+                const email = formatEmail(usernameInput);
+                await createUserWithEmailAndPassword(auth, email, passwordInput);
+                
+                alert('🎉 สมัครสมาชิกสำเร็จ!');
+            } catch (error) {
+                let msg = 'สมัครสมาชิกไม่สำเร็จ';
+                if (error.code === 'auth/email-already-in-use') msg = 'ชื่อผู้ใช้งานนี้มีในระบบแล้ว';
+                if (error.code === 'auth/weak-password') msg = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
+                
+                errorElement.innerText = `❌ ${msg}`;
+                errorElement.classList.remove('hidden');
+            } finally {
+                btn.innerText = '✨ ลงทะเบียนสมัครสมาชิก';
+                btn.disabled = false;
+            }
+        };
+
+        // --- 4. ระบบเข้าสู่ระบบ (Login) ---
+        window.handleLogin = async function(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('txt_username').value.trim();
+            const passwordInput = document.getElementById('txt_password').value.trim();
+            const errorElement = document.getElementById('login_error');
+            const btn = document.getElementById('btn_login');
+
+            try {
+                btn.innerText = '⏳ กำลังเข้าสู่ระบบ...';
+                btn.disabled = true;
+
+                const email = formatEmail(usernameInput);
+                await signInWithEmailAndPassword(auth, email, passwordInput);
+            } catch (error) {
+                errorElement.innerText = '❌ ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง!';
+                errorElement.classList.remove('hidden');
+            } finally {
+                btn.innerText = '🔑 เข้าสู่ระบบ';
+                btn.disabled = false;
+            }
+        };
+
+        // --- 5. ออกจากระบบ (Logout) ---
+        window.logout = async function() {
+            if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
+                await signOut(auth);
+            }
+        };
+
+        // --- 6. บันทึกงานซ่อมลง Firebase Firestore ---
+        window.saveData = async function() {
             const name = document.getElementById('txt_name').value.trim();
             const phone = document.getElementById('txt_phone').value.trim();
             const model = document.getElementById('txt_model').value.trim();
             const issue = document.getElementById('txt_issue').value.trim();
             const price = document.getElementById('txt_price').value.trim();
+            const btn = document.getElementById('btn_save');
 
             if (!phone) {
-                alert('โปรดกรอกเบอร์โทรศัพท์เพื่อใช้เป็น Tag ในการบันทึก');
+                alert('โปรดกรอกเบอร์โทรศัพท์เพื่อใช้เป็นรหัสค้นหา');
                 return;
             }
 
-            const dataArray = [name, model, issue, price];
-            localStorage.setItem(phone, JSON.stringify(dataArray));
-            alert('บันทึกข้อมูลเรียบร้อย!');
-        }
+            try {
+                btn.innerText = '⏳ กำลังบันทึกลง Cloud...';
+                btn.disabled = true;
 
-        // 2. ระบบค้นหาข้อมูล
-        function searchData() {
+                // บันทึกลง Firestore Collection "repairs" โดยใช้เบอร์โทรเป็น ID
+                await setDoc(doc(db, "repairs", phone), {
+                    customerName: name,
+                    deviceModel: model,
+                    issue: issue,
+                    price: price,
+                    updatedAt: new Date().toISOString()
+                });
+
+                alert('💾 บันทึกข้อมูลงานซ่อมลง Cloud เรียบร้อย!');
+            } catch (error) {
+                alert('เกิดข้อผิดพลาดในการบันทึก: ' + error.message);
+            } finally {
+                btn.innerText = '💾 บันทึกข้อมูลเข้า Firebase';
+                btn.disabled = false;
+            }
+        };
+
+        // --- 7. ค้นหางานซ่อมจาก Firebase Firestore ---
+        window.searchData = async function() {
             const searchPhone = document.getElementById('txt_search_phone').value.trim();
-            const storedData = localStorage.getItem(searchPhone);
+            const btn = document.getElementById('btn_search');
 
-            if (!storedData) {
-                alert('ไม่พบข้อมูลงานซ่อมเบอร์นี้');
-                document.getElementById('lbl_name').innerText = '-';
-                document.getElementById('lbl_model').innerText = '-';
-                document.getElementById('lbl_issue').innerText = '-';
-                document.getElementById('lbl_price').innerText = '-';
+            if (!searchPhone) {
+                alert('กรุณากรอกเบอร์โทรศัพท์ที่ต้องการค้นหา');
                 return;
             }
 
-            const [name, model, issue, price] = JSON.parse(storedData);
-            document.getElementById('lbl_name').innerText = name || '-';
-            document.getElementById('lbl_model').innerText = model || '-';
-            document.getElementById('lbl_issue').innerText = issue || '-';
-            document.getElementById('lbl_price').innerText = price ? `${price} บาท` : '-';
-        }
+            try {
+                btn.innerText = '⏳ ค้นหา...';
+                btn.disabled = true;
 
-        // 3. ระบบส่งข้อมูลเข้า LINE
-        function shareToLine() {
+                const docRef = doc(db, "repairs", searchPhone);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById('lbl_name').innerText = data.customerName || '-';
+                    document.getElementById('lbl_model').innerText = data.deviceModel || '-';
+                    document.getElementById('lbl_issue').innerText = data.issue || '-';
+                    document.getElementById('lbl_price').innerText = data.price ? `${data.price} บาท` : '-';
+                } else {
+                    alert('ไม่พบข้อมูลงานซ่อมของเบอร์โทรนี้ในระบบ');
+                    document.getElementById('lbl_name').innerText = '-';
+                    document.getElementById('lbl_model').innerText = '-';
+                    document.getElementById('lbl_issue').innerText = '-';
+                    document.getElementById('lbl_price').innerText = '-';
+                }
+            } catch (error) {
+                alert('เกิดข้อผิดพลาดในการค้นหา: ' + error.message);
+            } finally {
+                btn.innerText = 'ค้นหา';
+                btn.disabled = false;
+            }
+        };
+
+        // --- 8. ส่งเข้า LINE ---
+        window.shareToLine = function() {
             const name = document.getElementById('lbl_name').innerText;
             const model = document.getElementById('lbl_model').innerText;
             const issue = document.getElementById('lbl_issue').innerText;
@@ -168,10 +433,10 @@
             const message = `🧾 ใบเสร็จแจ้งงานซ่อม\n👤 ชื่อลูกค้า: ${name}\n📱 รุ่น/IMEI: ${model}\n🛠️ อาการเสีย: ${issue}\n💵 ราคาซ่อม: ${price}`;
             const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(message)}`;
             window.open(lineUrl, '_blank');
-        }
+        };
 
-        // 4. ระบบล้างข้อมูลบนหน้าจอ
-        function clearForm() {
+        // --- 9. ล้างฟอร์ม ---
+        window.clearForm = function() {
             document.getElementById('txt_name').value = '';
             document.getElementById('txt_phone').value = '';
             document.getElementById('txt_model').value = '';
@@ -183,10 +448,10 @@
             document.getElementById('lbl_model').innerText = '-';
             document.getElementById('lbl_issue').innerText = '-';
             document.getElementById('lbl_price').innerText = '-';
-        }
+        };
 
-        // 5. ระบบเปิดกล้องสแกนบาร์โค้ด
-        function startScan() {
+        // --- 10. สแกนบาร์โค้ด / IMEI ---
+        window.startScan = function() {
             document.getElementById('scanner_modal').classList.remove('hidden');
             document.getElementById('scanner_modal').classList.add('flex');
 
@@ -196,13 +461,13 @@
                 { fps: 10, qrbox: { width: 250, height: 150 } },
                 (decodedText) => {
                     document.getElementById('txt_model').value = decodedText;
-                    stopScan();
+                    window.stopScan();
                 },
                 () => {}
             );
-        }
+        };
 
-        function stopScan() {
+        window.stopScan = function() {
             if (html5QrcodeScanner) {
                 html5QrcodeScanner.stop().then(() => {
                     document.getElementById('scanner_modal').classList.add('hidden');
@@ -211,7 +476,7 @@
             } else {
                 document.getElementById('scanner_modal').classList.add('hidden');
             }
-        }
+        };
     </script>
 </body>
 </html>
