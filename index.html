@@ -11,13 +11,13 @@
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 font-sans p-4">
 
-    <div class="max-w-md mx-auto space-y-4">
+    <div class="max-w-md mx-auto space-y-4 pb-20">
 
         <!-- 🔹 Header Bar -->
         <header class="bg-slate-900 text-white p-4 rounded-2xl shadow-lg flex justify-between items-center">
             <div>
                 <h1 class="text-xl font-bold tracking-wide">🛠️ SmartRepair</h1>
-                <p class="text-xs text-slate-400 mt-0.5">ระบบบันทึกงานซ่อมออนไลน์ (Firebase Cloud)</p>
+                <p class="text-xs text-slate-400 mt-0.5">ระบบบันทึกงานซ่อมออนไลน์</p>
             </div>
             <!-- ปุ่ม Logout แสดงเมื่อเข้าสู่ระบบแล้ว -->
             <div id="user_profile" class="hidden text-right">
@@ -111,89 +111,239 @@
         </div>
 
         <!-- 🚀 MAIN CONTENT (ส่วนระบบงานซ่อม - จะแสดงเมื่อ Login แล้ว) -->
-        <div id="main_content" class="space-y-4 hidden">
+        <div id="main_content" class="hidden">
 
-            <!-- 💳 Card 1: บันทึกงานซ่อมใหม่ -->
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
-                <h2 class="text-md font-semibold text-slate-700 border-b pb-2">📝 บันทึกงานซ่อมใหม่ (Cloud)</h2>
+            <!-- ====== Section 1: Capture (งานซ่อม) ====== -->
+            <div id="section_capture" class="space-y-4">
+                <!-- 💳 Card 1: บันทึกงานซ่อมใหม่ -->
+                <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
+                    <h2 class="text-md font-semibold text-slate-700 border-b pb-2">📝 บันทึกงานซ่อมใหม่ (Cloud)</h2>
 
-                <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">ชื่อลูกค้า</label>
-                    <input type="text" id="txt_name" placeholder="กรอกชื่อลูกค้า" 
-                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">เบอร์โทรศัพท์ (ใช้เป็น รหัสค้นหา)</label>
-                    <input type="tel" id="txt_phone" placeholder="08XXXXXXXX" 
-                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">รุ่นโทรศัพท์ / เลข IMEI</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="txt_model" placeholder="กรอกรุ่น หรือสแกน IMEI" 
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">ชื่อลูกค้า</label>
+                        <input type="text" id="txt_name" placeholder="กรอกชื่อลูกค้า" 
                             class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                        <button onclick="startScan()" 
-                            class="bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-medium hover:bg-slate-700 transition flex items-center gap-1 whitespace-nowrap">
-                            📷 สแกน
-                        </button>
                     </div>
-                </div>
 
-                <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">อาการเสีย</label>
-                    <input type="text" id="txt_issue" placeholder="ระบุอาการเสีย" 
-                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">เบอร์โทรศัพท์ (ใช้เป็น รหัสค้นหา)</label>
+                        <input type="tel" id="txt_phone" placeholder="08XXXXXXXX" 
+                            class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    </div>
 
-                <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">ราคาประเมิน (บาท)</label>
-                    <input type="number" id="txt_price" placeholder="0.00" 
-                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">รุ่นโทรศัพท์ / เลข IMEI</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="txt_model" placeholder="กรอกรุ่น หรือสแกน IMEI" 
+                                class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                            <button onclick="startScan()" 
+                                class="bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-medium hover:bg-slate-700 transition flex items-center gap-1 whitespace-nowrap">
+                                📷 สแกน
+                            </button>
+                        </div>
+                    </div>
 
-                <button onclick="saveData()" id="btn_save"
-                    class="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-700 transition shadow-sm mt-2">
-                    💾 บันทึกข้อมูลเข้า Firebase
-                </button>
-            </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">อาการเสีย</label>
+                        <input type="text" id="txt_issue" placeholder="ระบุอาการเสีย" 
+                            class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    </div>
 
-            <!-- 💳 Card 2: ค้นหางานซ่อม -->
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
-                <h2 class="text-md font-semibold text-slate-700 border-b pb-2">🔍 ค้นหาข้อมูลงานซ่อม</h2>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">ราคาประเมิน (บาท)</label>
+                        <input type="number" id="txt_price" placeholder="0.00" 
+                            class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    </div>
 
-                <div class="flex gap-2">
-                    <input type="tel" id="txt_search_phone" placeholder="กรอกเบอร์โทรเพื่อค้นหา..." 
-                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
-                    <button onclick="searchData()" id="btn_search"
-                        class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition whitespace-nowrap">
-                        ค้นหา
+                    <button onclick="saveData()" id="btn_save"
+                        class="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-700 transition shadow-sm mt-2">
+                        💾 บันทึกข้อมูลเข้า Firebase
                     </button>
                 </div>
 
-                <!-- แสดงผลข้อมูลงานซ่อม -->
-                <div class="bg-slate-50 p-3 rounded-xl border space-y-1.5 text-xs text-slate-600 mt-2">
-                    <p><strong>👤 ชื่อลูกค้า:</strong> <span id="lbl_name" class="text-slate-800">-</span></p>
-                    <p><strong>📱 รุ่น/IMEI:</strong> <span id="lbl_model" class="text-slate-800">-</span></p>
-                    <p><strong>🛠️ อาการเสีย:</strong> <span id="lbl_issue" class="text-slate-800">-</span></p>
-                    <p><strong>💵 ราคาซ่อม:</strong> <span id="lbl_price" class="text-slate-800">-</span></p>
+                <!-- 💳 Card 2: ค้นหางานซ่อม -->
+                <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
+                    <h2 class="text-md font-semibold text-slate-700 border-b pb-2">🔍 ค้นหาข้อมูลงานซ่อม</h2>
+
+                    <div class="flex gap-2">
+                        <input type="tel" id="txt_search_phone" placeholder="กรอกเบอร์โทรเพื่อค้นหา..." 
+                            class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                        <button onclick="searchData()" id="btn_search"
+                            class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition whitespace-nowrap">
+                            ค้นหา
+                        </button>
+                    </div>
+
+                    <!-- แสดงผลข้อมูลงานซ่อม -->
+                    <div class="bg-slate-50 p-3 rounded-xl border space-y-1.5 text-xs text-slate-600 mt-2">
+                        <p><strong>👤 ชื่อลูกค้า:</strong> <span id="lbl_name" class="text-slate-800">-</span></p>
+                        <p><strong>📱 รุ่น/IMEI:</strong> <span id="lbl_model" class="text-slate-800">-</span></p>
+                        <p><strong>🛠️ อาการเสีย:</strong> <span id="lbl_issue" class="text-slate-800">-</span></p>
+                        <p><strong>💵 ราคาซ่อม:</strong> <span id="lbl_price" class="text-slate-800">-</span></p>
+                    </div>
+                </div>
+
+                <!-- 🟢 ปุ่มการทำงานล่างสุด -->
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="shareToLine()" 
+                        class="bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-xs hover:bg-emerald-600 transition text-center shadow-sm flex items-center justify-center gap-1">
+                        📲 ส่งเข้า LINE
+                    </button>
+                    <button onclick="clearForm()" 
+                        class="bg-slate-500 text-white font-semibold py-2.5 rounded-xl text-xs hover:bg-slate-600 transition text-center shadow-sm flex items-center justify-center gap-1">
+                        🔄 ล้างข้อมูล
+                    </button>
                 </div>
             </div>
 
-            <!-- 🟢 ปุ่มการทำงานล่างสุด -->
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="shareToLine()" 
-                    class="bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-xs hover:bg-emerald-600 transition text-center shadow-sm flex items-center justify-center gap-1">
-                    📲 ส่งเข้า LINE
-                </button>
-                <button onclick="clearForm()" 
-                    class="bg-slate-500 text-white font-semibold py-2.5 rounded-xl text-xs hover:bg-slate-600 transition text-center shadow-sm flex items-center justify-center gap-1">
-                    🔄 ล้างข้อมูล
-                </button>
+            <!-- ====== Section 2: JobSheet ====== -->
+            <div id="section_jobsheet" class="hidden bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                    <h2 class="text-md font-semibold text-slate-700 border-b pb-2 w-full">🧾 JobSheet จัดการสถานะ</h2>
+                    <button onclick="toggleQuickTips()" class="text-xs bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full hover:bg-slate-200 transition whitespace-nowrap">
+                        ✨ เคล็ดลัด
+                    </button>
+                </div>
+
+                <!-- Quick Tips -->
+                <div id="quick_tips" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600">
+                    <p class="font-semibold text-slate-700 mb-1">วิธีใช้งานเร็ว</p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>ค้นหาด้วยเบอร์โทรหน้าแรก ระบบจะเชื่อมข้อมูลมาหน้านี้</li>
+                        <li>เลือกสถานะในรายการ → กด “บันทึกสถานะ”</li>
+                    </ul>
+                </div>
+
+                <!-- Status selector -->
+                <div class="bg-slate-50 rounded-xl border border-slate-200 p-3 space-y-2">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-xs text-slate-500">ข้อมูลที่แสดงล่าสุด</p>
+                            <p class="text-sm font-semibold text-slate-800">
+                                <span id="jobsheet_row_title">ยังไม่ได้ค้นหาข้อมูล</span>
+                            </p>
+                            <p class="text-xs text-slate-600">
+                                ลูกค้า: <span id="jobsheet_row_customer">-</span>
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-slate-500">ราคาประเมิน</p>
+                            <p class="text-sm font-semibold text-indigo-700">
+                                <span id="jobsheet_row_price">-</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-2 pt-2 border-t mt-2">
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <span class="text-xs font-medium text-slate-600 whitespace-nowrap">สถานะงาน:</span>
+                            <span id="status_badge" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                                รอรับงาน
+                            </span>
+
+                            <select id="status_select" onchange="previewStatus()"
+                                    class="ml-auto w-full sm:w-auto flex-1 sm:flex-none px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white">
+                                <option value="waiting">รอรับงาน</option>
+                                <option value="repairing">กำลังซ่อม</option>
+                                <option value="waiting_parts">รออะไหล่</option>
+                                <option value="done">เสร็จสิ้น</option>
+                            </select>
+                        </div>
+
+                        <button onclick="saveStatusFromRow()" id="btn_save_status"
+                                class="w-full bg-indigo-600 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-indigo-700 transition shadow-sm mt-2">
+                            ✅ บันทึกสถานะ
+                        </button>
+                    </div>
+                </div>
             </div>
 
-        </div>
+            <!-- ====== Section 3: Admin ====== -->
+            <div id="section_admin" class="hidden bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
+                <h2 class="text-md font-semibold text-slate-700 border-b pb-2">🔧 จัดการสมาชิก (Admin)</h2>
+                <div class="grid grid-cols-1 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">ค้นหาสมาชิก</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="admin_search_user" placeholder="ชื่อ/อีเมล/role"
+                                   class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                            <button class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-indigo-700 whitespace-nowrap"
+                                    onclick="alert('ในเวอร์ชันนี้ยังไม่ได้ต่อ Query สมาชิก (ต้องต่อ Firestore collection ของ users)')">
+                                ค้นหา
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600">
+                        <p class="font-semibold text-slate-700 mb-1">รายการที่วางไว้เพื่อออกแบบต่อยอด</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li>เพิ่ม/ลบ user</li>
+                            <li>ดูประวัติและรายละเอียดสมาชิก</li>
+                            <li>สถิติเปรียบเทียบรายวัน/สัปดาห์/เดือน</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== Section 4: Export ====== -->
+            <div id="section_export" class="hidden bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
+                <h2 class="text-md font-semibold text-slate-700 border-b pb-2">📤 Export ข้อมูล (เจ้าของระบบ)</h2>
+                <div class="grid grid-cols-1 gap-3">
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+                        <p class="text-xs font-semibold text-slate-700">Export ครั้งเดียว</p>
+                        <div class="flex gap-2">
+                            <select id="export_format" class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white">
+                                <option value="excel">Excel (.xlsx)</option>
+                                <option value="sheets">Google Sheet</option>
+                            </select>
+                            <button onclick="alert('ต่อไปให้เรียกฟังก์ชัน export แล้วส่งลิงก์ทางอีเมล')"
+                                    class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-indigo-700 whitespace-nowrap">
+                                ส่งลิงก์
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== Section 5: Security ====== -->
+            <div id="section_security" class="hidden bg-white p-5 rounded-2xl shadow-md border border-slate-200/80 space-y-3">
+                <h2 class="text-md font-semibold text-slate-700 border-b pb-2">🔐 ความปลอดภัย</h2>
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600 space-y-2">
+                    <p class="font-semibold text-slate-700">สิ่งที่ออกแบบไว้</p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>เปลี่ยนรหัสผ่าน / ดูโปรไฟล์</li>
+                        <li>ดูประวัติการใช้งานของสมาชิก (Admin)</li>
+                        <li>จัดการสิทธิ์ตาม role</li>
+                    </ul>
+                    <button onclick="alert('ฟีเจอร์นี้เตรียมไว้สำหรับการต่อยอดในอนาคต')" class="w-full bg-slate-800 text-white py-2.5 rounded-xl text-sm hover:bg-slate-700 transition">
+                        เตรียมพร้อมใช้งาน
+                    </button>
+                </div>
+            </div>
+
+            <!-- 🧭 Bottom Navigation (ยึดติดขอบจอด้านล่าง) -->
+            <div class="fixed bottom-0 left-0 right-0 p-3 bg-slate-100 border-t z-40">
+                <div class="max-w-md mx-auto bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 shadow-sm p-2">
+                    <div class="grid grid-cols-5 gap-1">
+                        <button onclick="navTo('capture')" id="tab_capture" class="col-span-1 rounded-xl py-2 text-[10px] sm:text-xs font-semibold bg-indigo-600 text-white flex flex-col items-center justify-center">
+                            <span>📝</span><span>ซ่อม</span>
+                        </button>
+                        <button onclick="navTo('jobsheet')" id="tab_jobsheet" class="col-span-1 rounded-xl py-2 text-[10px] sm:text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex flex-col items-center justify-center">
+                            <span>🧾</span><span>สถานะ</span>
+                        </button>
+                        <button onclick="navTo('admin')" id="tab_admin" class="col-span-1 rounded-xl py-2 text-[10px] sm:text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex flex-col items-center justify-center">
+                            <span>🔧</span><span>แอดมิน</span>
+                        </button>
+                        <button onclick="navTo('export')" id="tab_export" class="col-span-1 rounded-xl py-2 text-[10px] sm:text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex flex-col items-center justify-center">
+                            <span>📤</span><span>ออก</span>
+                        </button>
+                        <button onclick="navTo('security')" id="tab_security" class="col-span-1 rounded-xl py-2 text-[10px] sm:text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex flex-col items-center justify-center">
+                            <span>🔐</span><span>ระบบ</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- End Main Content -->
 
     </div>
 
@@ -201,31 +351,150 @@
     <div id="scanner_modal" class="fixed inset-0 bg-black/70 hidden flex-col items-center justify-center p-4 z-50">
         <div class="bg-white p-4 rounded-2xl w-full max-w-sm space-y-3">
             <h3 class="text-sm font-bold text-slate-700 text-center">สแกนบาร์โค้ด / IMEI</h3>
-            <div id="reader" class="w-full overflow-hidden rounded-xl"></div>
+            <div id="reader" class="w-full overflow-hidden rounded-xl bg-black"></div>
             <button onclick="stopScan()" class="w-full bg-red-500 text-white py-2 rounded-xl text-xs font-medium">ปิดกล้อง</button>
         </div>
     </div>
 
+
+    <!-- ========================================== -->
+    <!-- 📜 Script ทั่วไป สำหรับ UI และ HTML DOM -->
+    <!-- ========================================== -->
+    <script>
+        // --- ระบบ Navigation ---
+        const sectionIds = ['capture', 'jobsheet', 'admin', 'export', 'security'];
+        window.navTo = function(target){
+            const tabIds = {
+                capture: 'tab_capture', jobsheet: 'tab_jobsheet', admin: 'tab_admin', export: 'tab_export', security: 'tab_security'
+            };
+            const showMap = {
+                capture: 'section_capture', jobsheet: 'section_jobsheet', admin: 'section_admin', export: 'section_export', security: 'section_security'
+            };
+
+            // อัปเดตสีปุ่ม
+            for (const key of Object.keys(tabIds)) {
+                const el = document.getElementById(tabIds[key]);
+                if (!el) continue;
+                if (key === target) {
+                    el.classList.remove('bg-slate-100','text-slate-700','hover:bg-slate-200');
+                    el.classList.add('bg-indigo-600','text-white');
+                } else {
+                    el.classList.add('bg-slate-100','text-slate-700','hover:bg-slate-200');
+                    el.classList.remove('bg-indigo-600','text-white');
+                }
+            }
+
+            // ซ่อน/แสดงหน้าต่าง
+            sectionIds.forEach(id=>{
+                const el = document.getElementById(showMap[id]);
+                if (!el) return;
+                if (id === target) el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
+        };
+
+        // --- UI เคล็ดลับ ---
+        window.toggleQuickTips = function(){
+            const el = document.getElementById('quick_tips');
+            if (el) el.classList.toggle('hidden');
+        };
+
+        // --- UI จัดการสถานะ JobSheet ---
+        function getStatusMeta(key){
+            const map = {
+                waiting: { label: 'รอรับงาน', badge: 'bg-slate-100 text-slate-700' },
+                repairing: { label: 'กำลังซ่อม', badge: 'bg-indigo-100 text-indigo-700' },
+                waiting_parts: { label: 'รออะไหล่', badge: 'bg-amber-100 text-amber-700' },
+                done: { label: 'เสร็จสิ้น', badge: 'bg-emerald-100 text-emerald-700' }
+            };
+            return map[key] || map.waiting;
+        }
+
+        window.previewStatus = function() {
+            const statusKey = document.getElementById('status_select').value;
+            const meta = getStatusMeta(statusKey);
+            const badge = document.getElementById('status_badge');
+            if (badge) {
+                badge.innerText = meta.label;
+                badge.className = `px-3 py-1 rounded-full text-xs font-semibold ${meta.badge}`;
+            }
+        }
+
+        window.saveStatusFromRow = function(){
+            document.getElementById('btn_save_status').innerText = '⏳ กำลังบันทึกสถานะ...';
+            document.getElementById('btn_save_status').disabled = true;
+            setTimeout(()=>{
+                alert('✅ บันทึกสถานะแล้ว (ในอนาคตจะบันทึกลง Firestore ตามเบอร์ที่ค้นหา)');
+                document.getElementById('btn_save_status').innerText = '✅ บันทึกสถานะ';
+                document.getElementById('btn_save_status').disabled = false;
+            }, 500);
+        };
+
+        // --- ฟังก์ชันเคลียร์ฟอร์ม ---
+        window.clearForm = function() {
+            document.getElementById('txt_name').value = '';
+            document.getElementById('txt_phone').value = '';
+            document.getElementById('txt_model').value = '';
+            document.getElementById('txt_issue').value = '';
+            document.getElementById('txt_price').value = '';
+        }
+
+        // --- ฟังก์ชันแชร์ลง LINE ---
+        window.shareToLine = function() {
+            const name = document.getElementById('txt_name').value || 'ไม่ระบุ';
+            const phone = document.getElementById('txt_phone').value || 'ไม่ระบุ';
+            const issue = document.getElementById('txt_issue').value || 'ไม่ระบุ';
+            
+            const text = `แจ้งซ่อมใหม่\nลูกค้า: ${name}\nเบอร์: ${phone}\nอาการ: ${issue}`;
+            const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(text)}`;
+            window.open(lineUrl, '_blank');
+        }
+
+        // --- ฟังก์ชันสแกน QR / Barcode ---
+        let html5QrcodeScanner = null;
+        window.startScan = function() {
+            document.getElementById('scanner_modal').classList.remove('hidden');
+            document.getElementById('scanner_modal').classList.add('flex');
+            
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: {width: 250, height: 100} },
+                (decodedText) => {
+                    document.getElementById('txt_model').value = decodedText;
+                    stopScan();
+                },
+                (errorMessage) => { /* ซ่อน error ตอนที่ยังหาสแกนไม่เจอ */ }
+            ).catch(err => {
+                alert("ไม่สามารถเปิดกล้องได้ กรุณาตรวจสอบสิทธิ์การเข้าถึงกล้อง");
+                stopScan();
+            });
+        }
+
+        window.stopScan = function() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner.clear();
+                }).catch(err => console.log(err));
+            }
+            document.getElementById('scanner_modal').classList.add('hidden');
+            document.getElementById('scanner_modal').classList.remove('flex');
+        }
+    </script>
+
+
+    <!-- ========================================== -->
     <!-- 📜 Firebase JS SDK (v10 Module) -->
+    <!-- ========================================== -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
-            getAuth, 
-            createUserWithEmailAndPassword, 
-            signInWithEmailAndPassword, 
-            signOut, 
-            onAuthStateChanged 
+            getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { 
-            getFirestore, 
-            doc, 
-            setDoc, 
-            getDoc 
+            getFirestore, doc, setDoc, getDoc 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // ==========================================
-        // 🔹 ค่า FIREBASE CONFIG ของโปรเจกต์คุณ
-        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyCZE5VddalQi8ME7vSLDPZjEABno-3ZH5Q",
             authDomain: "smart-repair-app-feff0.firebaseapp.com",
@@ -236,19 +505,15 @@
             measurementId: "G-CD7NPK1F85"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        let html5QrcodeScanner = null;
-
-        // แปลง Username ทั่วไปเป็นรูปแบบ Email เพื่อส่งเข้า Firebase Auth
         function formatEmail(input) {
             return input.includes('@') ? input : `${input}@smartrepair.local`;
         }
 
-        // --- 1. ตรวจสอบสถานะการเข้าสู่ระบบอัตโนมัติ ---
+        // --- ตรวจสอบสถานะ ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 const displayName = user.email.replace('@smartrepair.local', '');
@@ -264,11 +529,9 @@
             }
         });
 
-        // --- 2. ฟังก์ชันสลับหน้า Login / Register ---
         window.toggleAuthMode = function(mode) {
             document.getElementById('login_error').classList.add('hidden');
             document.getElementById('register_error').classList.add('hidden');
-
             if (mode === 'register') {
                 document.getElementById('login_card').classList.add('hidden');
                 document.getElementById('register_card').classList.remove('hidden');
@@ -278,7 +541,6 @@
             }
         };
 
-        // --- 3. ระบบสมัครสมาชิก (Register) ---
         window.handleRegister = async function(e) {
             e.preventDefault();
             const usernameInput = document.getElementById('reg_username').value.trim();
@@ -294,27 +556,21 @@
             }
 
             try {
-                btn.innerText = '⏳ กำลังลงทะเบียน...';
-                btn.disabled = true;
-
+                btn.innerText = '⏳ กำลังลงทะเบียน...'; btn.disabled = true;
                 const email = formatEmail(usernameInput);
                 await createUserWithEmailAndPassword(auth, email, passwordInput);
-                
                 alert('🎉 สมัครสมาชิกสำเร็จ!');
             } catch (error) {
                 let msg = 'สมัครสมาชิกไม่สำเร็จ';
                 if (error.code === 'auth/email-already-in-use') msg = 'ชื่อผู้ใช้งานนี้มีในระบบแล้ว';
                 if (error.code === 'auth/weak-password') msg = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
-                
                 errorElement.innerText = `❌ ${msg}`;
                 errorElement.classList.remove('hidden');
             } finally {
-                btn.innerText = '✨ ลงทะเบียนสมัครสมาชิก';
-                btn.disabled = false;
+                btn.innerText = '✨ ลงทะเบียนสมัครสมาชิก'; btn.disabled = false;
             }
         };
 
-        // --- 4. ระบบเข้าสู่ระบบ (Login) ---
         window.handleLogin = async function(e) {
             e.preventDefault();
             const usernameInput = document.getElementById('txt_username').value.trim();
@@ -323,28 +579,21 @@
             const btn = document.getElementById('btn_login');
 
             try {
-                btn.innerText = '⏳ กำลังเข้าสู่ระบบ...';
-                btn.disabled = true;
-
+                btn.innerText = '⏳ กำลังเข้าสู่ระบบ...'; btn.disabled = true;
                 const email = formatEmail(usernameInput);
                 await signInWithEmailAndPassword(auth, email, passwordInput);
             } catch (error) {
                 errorElement.innerText = '❌ ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง!';
                 errorElement.classList.remove('hidden');
             } finally {
-                btn.innerText = '🔑 เข้าสู่ระบบ';
-                btn.disabled = false;
+                btn.innerText = '🔑 เข้าสู่ระบบ'; btn.disabled = false;
             }
         };
 
-        // --- 5. ออกจากระบบ (Logout) ---
         window.logout = async function() {
-            if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
-                await signOut(auth);
-            }
+            if (confirm('คุณต้องการออกจากระบบหรือไม่?')) await signOut(auth);
         };
 
-        // --- 6. บันทึกงานซ่อมลง Firebase Firestore ---
         window.saveData = async function() {
             const name = document.getElementById('txt_name').value.trim();
             const phone = document.getElementById('txt_phone').value.trim();
@@ -353,128 +602,53 @@
             const price = document.getElementById('txt_price').value.trim();
             const btn = document.getElementById('btn_save');
 
-            if (!phone) {
-                alert('โปรดกรอกเบอร์โทรศัพท์เพื่อใช้เป็นรหัสค้นหา');
-                return;
-            }
+            if (!phone) { alert('โปรดกรอกเบอร์โทรศัพท์เพื่อใช้เป็นรหัสค้นหา'); return; }
 
             try {
-                btn.innerText = '⏳ กำลังบันทึกลง Cloud...';
-                btn.disabled = true;
-
-                // บันทึกลง Firestore Collection "repairs" โดยใช้เบอร์โทรเป็น ID
+                btn.innerText = '⏳ กำลังบันทึกลง Cloud...'; btn.disabled = true;
                 await setDoc(doc(db, "repairs", phone), {
-                    customerName: name,
-                    deviceModel: model,
-                    issue: issue,
-                    price: price,
-                    updatedAt: new Date().toISOString()
+                    customerName: name, deviceModel: model, issue: issue, price: price, updatedAt: new Date().toISOString()
                 });
-
                 alert('💾 บันทึกข้อมูลงานซ่อมลง Cloud เรียบร้อย!');
             } catch (error) {
                 alert('เกิดข้อผิดพลาดในการบันทึก: ' + error.message);
             } finally {
-                btn.innerText = '💾 บันทึกข้อมูลเข้า Firebase';
-                btn.disabled = false;
+                btn.innerText = '💾 บันทึกข้อมูลเข้า Firebase'; btn.disabled = false;
             }
         };
 
-        // --- 7. ค้นหางานซ่อมจาก Firebase Firestore ---
         window.searchData = async function() {
             const searchPhone = document.getElementById('txt_search_phone').value.trim();
             const btn = document.getElementById('btn_search');
 
-            if (!searchPhone) {
-                alert('กรุณากรอกเบอร์โทรศัพท์ที่ต้องการค้นหา');
-                return;
-            }
+            if (!searchPhone) { alert('กรุณากรอกเบอร์โทรศัพท์ที่ต้องการค้นหา'); return; }
 
             try {
-                btn.innerText = '⏳ ค้นหา...';
-                btn.disabled = true;
-
+                btn.innerText = '⏳ ค้นหา...'; btn.disabled = true;
                 const docRef = doc(db, "repairs", searchPhone);
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
+                    
+                    // แสดงในหน้าค้นหาหลัก
                     document.getElementById('lbl_name').innerText = data.customerName || '-';
                     document.getElementById('lbl_model').innerText = data.deviceModel || '-';
                     document.getElementById('lbl_issue').innerText = data.issue || '-';
                     document.getElementById('lbl_price').innerText = data.price ? `${data.price} บาท` : '-';
+                    
+                    // โอนข้อมูลไปแสดงในหน้า JobSheet ด้วย
+                    document.getElementById('jobsheet_row_title').innerText = `${data.deviceModel || 'ไม่ระบุรุ่น'} (${data.issue || '-'})`;
+                    document.getElementById('jobsheet_row_customer').innerText = data.customerName || '-';
+                    document.getElementById('jobsheet_row_price').innerText = data.price ? `${data.price} ฿` : '-';
+                    
                 } else {
                     alert('ไม่พบข้อมูลงานซ่อมของเบอร์โทรนี้ในระบบ');
-                    document.getElementById('lbl_name').innerText = '-';
-                    document.getElementById('lbl_model').innerText = '-';
-                    document.getElementById('lbl_issue').innerText = '-';
-                    document.getElementById('lbl_price').innerText = '-';
                 }
             } catch (error) {
                 alert('เกิดข้อผิดพลาดในการค้นหา: ' + error.message);
             } finally {
-                btn.innerText = 'ค้นหา';
-                btn.disabled = false;
-            }
-        };
-
-        // --- 8. ส่งเข้า LINE ---
-        window.shareToLine = function() {
-            const name = document.getElementById('lbl_name').innerText;
-            const model = document.getElementById('lbl_model').innerText;
-            const issue = document.getElementById('lbl_issue').innerText;
-            const price = document.getElementById('lbl_price').innerText;
-
-            if (name === '-') {
-                alert('โปรดค้นหาข้อมูลงานซ่อมก่อนกดส่ง LINE');
-                return;
-            }
-
-            const message = `🧾 ใบเสร็จแจ้งงานซ่อม\n👤 ชื่อลูกค้า: ${name}\n📱 รุ่น/IMEI: ${model}\n🛠️ อาการเสีย: ${issue}\n💵 ราคาซ่อม: ${price}`;
-            const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(message)}`;
-            window.open(lineUrl, '_blank');
-        };
-
-        // --- 9. ล้างฟอร์ม ---
-        window.clearForm = function() {
-            document.getElementById('txt_name').value = '';
-            document.getElementById('txt_phone').value = '';
-            document.getElementById('txt_model').value = '';
-            document.getElementById('txt_issue').value = '';
-            document.getElementById('txt_price').value = '';
-            document.getElementById('txt_search_phone').value = '';
-
-            document.getElementById('lbl_name').innerText = '-';
-            document.getElementById('lbl_model').innerText = '-';
-            document.getElementById('lbl_issue').innerText = '-';
-            document.getElementById('lbl_price').innerText = '-';
-        };
-
-        // --- 10. สแกนบาร์โค้ด / IMEI ---
-        window.startScan = function() {
-            document.getElementById('scanner_modal').classList.remove('hidden');
-            document.getElementById('scanner_modal').classList.add('flex');
-
-            html5QrcodeScanner = new Html5Qrcode("reader");
-            html5QrcodeScanner.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 150 } },
-                (decodedText) => {
-                    document.getElementById('txt_model').value = decodedText;
-                    window.stopScan();
-                },
-                () => {}
-            );
-        };
-
-        window.stopScan = function() {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.stop().then(() => {
-                    document.getElementById('scanner_modal').classList.add('hidden');
-                    document.getElementById('scanner_modal').classList.remove('flex');
-                });
-            } else {
-                document.getElementById('scanner_modal').classList.add('hidden');
+                btn.innerText = 'ค้นหา'; btn.disabled = false;
             }
         };
     </script>
