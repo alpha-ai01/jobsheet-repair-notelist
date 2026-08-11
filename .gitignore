@@ -38,3 +38,14 @@ package-lock.json
 firestore-debug.log
 firebase-debug.log
 ui-debug.log
+
+# Local backup files
+*.backup.html
+*.html.backup-*
+index.backup*
+index.html.backup-*
+
+# Firebase Emulator logs
+firestore-debug.log
+firebase-debug.log
+ui-debug.log
