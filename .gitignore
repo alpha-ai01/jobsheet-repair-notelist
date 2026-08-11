@@ -21,6 +21,7 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
+<<<<<<< HEAD
 # Node.js dependencies
 node_modules/
 
@@ -28,3 +29,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+=======
+package.json
+package-lock.json
+>>>>>>> d161b730dae4683bbf1c304963c91b14326c2c3e
