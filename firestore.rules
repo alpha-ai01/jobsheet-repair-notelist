@@ -1,0 +1,89 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function currentUser() {
+      return get(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      );
+    }
+
+    function isActive() {
+      return signedIn()
+        && currentUser().data.active == true;
+    }
+
+    function isAdmin() {
+      return isActive()
+        && currentUser().data.role == "admin";
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow read: if isAdmin();
+
+      allow create: if
+        signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == "user"
+        && request.resource.data.active == true;
+
+      allow update: if
+        signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.active == resource.data.active;
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /repairs/{repairId} {
+      allow read: if isActive();
+
+      allow create: if
+        isActive()
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow update: if
+        isActive()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "statusNote",
+          "statusUpdatedBy",
+          "statusUpdatedByEmail",
+          "updatedAt"
+        ])
+        && request.resource.data.statusUpdatedBy == request.auth.uid;
+
+      allow delete: if isAdmin();
+    }
+
+    match /customers/{customerId} {
+      allow read: if isActive();
+      allow create, update: if isActive();
+      allow delete: if isAdmin();
+    }
+
+    match /references/{referenceId} {
+      allow read: if isActive();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /analytics/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    match /admin/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

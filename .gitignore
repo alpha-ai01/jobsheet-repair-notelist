@@ -33,3 +33,8 @@ node_modules/
 package.json
 package-lock.json
 >>>>>>> d161b730dae4683bbf1c304963c91b14326c2c3e
+
+# Firebase Emulator
+firestore-debug.log
+firebase-debug.log
+ui-debug.log
