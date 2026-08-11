@@ -21,3 +21,10 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
+# Node.js dependencies
+node_modules/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
