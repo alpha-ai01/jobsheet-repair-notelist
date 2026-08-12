@@ -49,3 +49,6 @@ index.html.backup-*
 firestore-debug.log
 firebase-debug.log
 ui-debug.log
+
+# Workspace migration reports (local/private)
+migration-reports/
