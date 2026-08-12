@@ -284,6 +284,21 @@ service cloud.firestore {
       }
     }
 
+    /*
+     * Collection-group membership discovery.
+     *
+     * Required by:
+     * collectionGroup(db, "members")
+     * where("uid", "==", request.auth.uid)
+     *
+     * Query can only return membership documents
+     * belonging to the authenticated user.
+     */
+    match /{path=**}/members/{uid} {
+      allow list: if signedIn()
+        && resource.data.uid == request.auth.uid;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
