@@ -1391,6 +1391,113 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+/* =========================================================
+   SMARTREPAIR_WORKSPACE_V2
+========================================================= */
+
+const DEFAULT_WORKSPACE_ID = "smart-fix-repair-msqd4lyb";
+
+let activeWorkspaceId =
+    localStorage.getItem("smartrepair.activeWorkspaceId")
+    || DEFAULT_WORKSPACE_ID;
+
+let currentWorkspace = null;
+
+function workspaceCollection(name) {
+    if (!activeWorkspaceId) {
+        throw new Error("ยังไม่ได้เลือก Workspace");
+    }
+
+    return collection(
+        db,
+        "workspaces",
+        activeWorkspaceId,
+        name
+    );
+}
+
+function workspaceDoc(name, id) {
+    if (!activeWorkspaceId) {
+        throw new Error("ยังไม่ได้เลือก Workspace");
+    }
+
+    return doc(
+        db,
+        "workspaces",
+        activeWorkspaceId,
+        name,
+        id
+    );
+}
+
+async function loadCurrentWorkspaceMembership() {
+
+    if (!currentUser || !activeWorkspaceId) {
+        return;
+    }
+
+    const wsSnap = await getDoc(
+        doc(db, "workspaces", activeWorkspaceId)
+    );
+
+    if (!wsSnap.exists()) {
+        throw new Error("ไม่พบ Workspace");
+    }
+
+    currentWorkspace = {
+        id: wsSnap.id,
+        ...wsSnap.data()
+    };
+
+    const memberSnap = await getDoc(
+        doc(
+            db,
+            "workspaces",
+            activeWorkspaceId,
+            "members",
+            currentUser.uid
+        )
+    );
+
+    if (!memberSnap.exists()) {
+        throw new Error(
+            "บัญชีนี้ไม่ได้เป็นสมาชิก Workspace"
+        );
+    }
+
+    const membership = memberSnap.data();
+
+    if (membership.status !== "active") {
+        throw new Error(
+            "สิทธิ์เข้า Workspace ถูกระงับ"
+        );
+    }
+
+    currentRole =
+        ["owner","admin","manager","member"]
+            .includes(membership.role)
+            ? membership.role
+            : "member";
+}
+
+window.setActiveWorkspace = async function(id) {
+    if (!id) return;
+
+    activeWorkspaceId = id;
+
+    localStorage.setItem(
+        "smartrepair.activeWorkspaceId",
+        id
+    );
+
+    await loadCurrentWorkspaceMembership();
+    applyRoleUI();
+    await loadAllData();
+    navigate("dashboard");
+};
+
+
+
 
 /* =========================================================
    GLOBAL STATE
@@ -1763,6 +1870,7 @@ onAuthStateChanged(auth, async user => {
     try {
 
         await loadCurrentUserProfile();
+        await loadCurrentWorkspaceMembership();
 
         $("auth_area").classList.add("hidden");
         $("main_app").classList.remove("hidden");
@@ -1882,7 +1990,7 @@ function applyRoleUI() {
         .querySelectorAll(".admin-only")
         .forEach(element => {
 
-            if (currentRole === "admin") {
+            if (isAdmin()) {
                 element.classList.remove("hidden-force");
             } else {
                 element.classList.add("hidden-force");
@@ -1894,7 +2002,18 @@ function applyRoleUI() {
 
 
 function isAdmin() {
-    return currentRole === "admin";
+    return currentRole === "owner"
+        || currentRole === "admin";
+}
+
+function isManagerUp() {
+    return currentRole === "owner"
+        || currentRole === "admin"
+        || currentRole === "manager";
+}
+
+function isOwner() {
+    return currentRole === "owner";
 }
 
 
@@ -2173,7 +2292,7 @@ $("job_form").addEventListener("submit", async event => {
          */
         const jobRef =
             await addDoc(
-                collection(db, "repairs"),
+                workspaceCollection("repairs"),
                 {
                     jobNumber: jobNumber,
 
@@ -2223,10 +2342,7 @@ $("job_form").addEventListener("submit", async event => {
         if (customerId) {
 
             await setDoc(
-                doc(
-                    db,
-                    "customers",
-                    customerId
+                workspaceDoc("customers", customerId
                 ),
                 {
                     customerName:
@@ -2327,7 +2443,7 @@ window.loadJobs = async function() {
 
         const snapshot =
             await getDocs(
-                collection(db, "repairs")
+                workspaceCollection("repairs")
             );
 
         allJobs = [];
@@ -2672,10 +2788,7 @@ window.confirmStatusChange = async function() {
             $("status_note").value.trim();
 
         await updateDoc(
-            doc(
-                db,
-                "repairs",
-                pendingStatusJobId
+            workspaceDoc("repairs", pendingStatusJobId
             ),
             {
                 status:
@@ -2895,7 +3008,7 @@ window.loadCustomers = async function() {
 
         const snapshot =
             await getDocs(
-                collection(db, "customers")
+                workspaceCollection("customers")
             );
 
         allCustomers = [];
@@ -3060,10 +3173,7 @@ async function loadReferences() {
 
         const snapshot =
             await getDocs(
-                collection(
-                    db,
-                    "references"
-                )
+                workspaceCollection("references")
             );
 
         const references = [];
@@ -3159,10 +3269,7 @@ window.addReference = async function() {
     try {
 
         await addDoc(
-            collection(
-                db,
-                "references"
-            ),
+            workspaceCollection("references"),
             {
                 name: name.trim(),
                 type: type.trim(),

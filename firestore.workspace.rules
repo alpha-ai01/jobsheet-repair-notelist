@@ -7,98 +7,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    /* =========================================================
-       V1 HELPERS — keep current production compatible
-    ========================================================= */
-
-    function currentUser() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-
-    function isActiveV1() {
-      return signedIn() && currentUser().data.active == true;
-    }
-
-    function isAdminV1() {
-      return isActiveV1() && currentUser().data.role == "admin";
-    }
-
-    /* =========================================================
-       V1 USERS
-    ========================================================= */
-
-    match /users/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
-      allow read: if isAdminV1();
-
-      allow create: if signedIn()
-        && request.auth.uid == uid
-        && request.resource.data.role == "user"
-        && request.resource.data.active == true;
-
-      allow update: if signedIn()
-        && request.auth.uid == uid
-        && request.resource.data.role == resource.data.role
-        && request.resource.data.active == resource.data.active;
-
-      allow create, update, delete: if isAdminV1();
-    }
-
-    /* =========================================================
-       V1 GLOBAL COLLECTIONS — TEMPORARY COMPATIBILITY
-       Keep until frontend cutover is complete.
-    ========================================================= */
-
-    match /repairs/{repairId} {
-      allow read: if isActiveV1();
-
-      allow create: if isActiveV1()
-        && request.resource.data.createdBy == request.auth.uid;
-
-      allow update: if isActiveV1()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          "status",
-          "statusNote",
-          "statusUpdatedBy",
-          "statusUpdatedByEmail",
-          "updatedAt"
-        ])
-        && request.resource.data.statusUpdatedBy == request.auth.uid;
-
-      allow delete: if isAdminV1();
-    }
-
-    match /customers/{customerId} {
-      allow read: if isActiveV1();
-      allow create, update: if isActiveV1();
-      allow delete: if isAdminV1();
-    }
-
-    match /references/{referenceId} {
-      allow read: if isActiveV1();
-      allow create, update, delete: if isAdminV1();
-    }
-
-    match /analytics/{document=**} {
-      allow read, write: if isAdminV1();
-    }
-
-    match /admin/{document=**} {
-      allow read, write: if isAdminV1();
-    }
-
-    /* =========================================================
-       V2 WORKSPACE HELPERS
-    ========================================================= */
-
     function workspaceDoc(workspaceId) {
       return get(/databases/$(database)/documents/workspaces/$(workspaceId));
     }
 
     function memberDoc(workspaceId) {
-      return get(
-        /databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)
-      );
+      return get(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
     }
 
     function isWorkspaceMember(workspaceId) {
@@ -106,35 +20,35 @@ service cloud.firestore {
         && memberDoc(workspaceId).data.status == "active";
     }
 
-    function workspaceRole(workspaceId) {
+    function role(workspaceId) {
       return memberDoc(workspaceId).data.role;
     }
 
     function isOwner(workspaceId) {
       return isWorkspaceMember(workspaceId)
-        && workspaceRole(workspaceId) == "owner"
+        && role(workspaceId) == "owner"
         && workspaceDoc(workspaceId).data.ownerUid == request.auth.uid;
     }
 
-    function isWorkspaceAdmin(workspaceId) {
+    function isAdmin(workspaceId) {
       return isWorkspaceMember(workspaceId)
-        && workspaceRole(workspaceId) == "admin";
+        && role(workspaceId) == "admin";
     }
 
     function isManager(workspaceId) {
       return isWorkspaceMember(workspaceId)
-        && workspaceRole(workspaceId) == "manager";
+        && role(workspaceId) == "manager";
     }
 
     function isManagerUp(workspaceId) {
       return isOwner(workspaceId)
-        || isWorkspaceAdmin(workspaceId)
+        || isAdmin(workspaceId)
         || isManager(workspaceId);
     }
 
     function isAdminUp(workspaceId) {
       return isOwner(workspaceId)
-        || isWorkspaceAdmin(workspaceId);
+        || isAdmin(workspaceId);
     }
 
     function validAssignableRole(workspaceId, newRole) {
@@ -142,7 +56,7 @@ service cloud.firestore {
         isOwner(workspaceId)
         && newRole in ["admin", "manager", "member"]
       ) || (
-        isWorkspaceAdmin(workspaceId)
+        isAdmin(workspaceId)
         && newRole in ["manager", "member"]
       ) || (
         isManager(workspaceId)
@@ -150,11 +64,34 @@ service cloud.firestore {
       );
     }
 
-    /* =========================================================
-       V2 WORKSPACES
-    ========================================================= */
+    /* ---------------- USERS ---------------- */
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly([
+          "uid", "firstName", "lastName", "email", "phone",
+          "emailVerified", "phoneVerified", "createdAt", "updatedAt"
+        ]);
+
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "firstName", "lastName", "phone", "emailVerified",
+          "phoneVerified", "updatedAt"
+        ]);
+
+      allow delete: if false;
+    }
+
+    /* ---------------- WORKSPACES ---------------- */
 
     match /workspaces/{workspaceId} {
+
       allow read: if isWorkspaceMember(workspaceId);
 
       allow create: if signedIn()
@@ -175,9 +112,12 @@ service cloud.firestore {
 
       allow delete: if false;
 
+      /* ---------------- MEMBERS ---------------- */
+
       match /members/{uid} {
         allow read: if isWorkspaceMember(workspaceId);
 
+        /* Workspace owner creates the first owner membership */
         allow create: if (
           signedIn()
           && uid == request.auth.uid
@@ -206,22 +146,19 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      /* ---------------- REPAIRS ---------------- */
+
       match /repairs/{repairId} {
         allow read: if isWorkspaceMember(workspaceId);
 
-        /* Owner may copy historical jobs during migration.
-           Normal members must create jobs in their own identity. */
-        allow create: if isOwner(workspaceId)
-          || (
-            isWorkspaceMember(workspaceId)
-            && request.resource.data.createdBy == request.auth.uid
-            && request.resource.data.status == "waiting"
-          );
+        allow create: if isWorkspaceMember(workspaceId)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.status == "waiting";
 
         allow update: if isManagerUp(workspaceId)
           || (
             isWorkspaceMember(workspaceId)
-            && workspaceRole(workspaceId) == "member"
+            && role(workspaceId) == "member"
             && resource.data.status != "done"
             && resource.data.status != "cancelled"
             && request.time < resource.data.createdAt + duration.value(3, "h")
@@ -249,22 +186,24 @@ service cloud.firestore {
         }
       }
 
+      /* ---------------- CUSTOMERS ---------------- */
+
       match /customers/{customerId} {
         allow read: if isWorkspaceMember(workspaceId);
         allow create: if isWorkspaceMember(workspaceId);
-
         allow update: if isManagerUp(workspaceId)
           || (
             isWorkspaceMember(workspaceId)
-            && workspaceRole(workspaceId) == "member"
+            && role(workspaceId) == "member"
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               "customerName", "phone", "note", "lastJobId",
               "lastJobNumber", "updatedAt"
             ])
           );
-
         allow delete: if isAdminUp(workspaceId);
       }
+
+      /* ---------------- REFERENCES ---------------- */
 
       match /references/{referenceId} {
         allow read: if isWorkspaceMember(workspaceId);
@@ -272,10 +211,15 @@ service cloud.firestore {
         allow delete: if isAdminUp(workspaceId);
       }
 
+      /* ---------------- INVITATIONS ---------------- */
+
       match /invitations/{inviteId} {
-        allow read, create, update: if isAdminUp(workspaceId);
+        allow read: if isAdminUp(workspaceId);
+        allow create, update: if isAdminUp(workspaceId);
         allow delete: if isOwner(workspaceId);
       }
+
+      /* ---------------- AUDIT LOGS ---------------- */
 
       match /auditLogs/{logId} {
         allow read: if isManagerUp(workspaceId);
@@ -288,9 +232,7 @@ service cloud.firestore {
       }
     }
 
-    /* =========================================================
-       DEFAULT DENY
-    ========================================================= */
+    /* ---------------- DEFAULT DENY ---------------- */
 
     match /{document=**} {
       allow read, write: if false;
