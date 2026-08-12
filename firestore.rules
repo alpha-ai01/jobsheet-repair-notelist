@@ -7,89 +7,9 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    /* =========================================================
-       V1 HELPERS — keep current production compatible
-    ========================================================= */
-
-    function currentUser() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    function isFinalStatus(status) {
+      return status in ["done", "cancelled"];
     }
-
-    function isActiveV1() {
-      return signedIn() && currentUser().data.active == true;
-    }
-
-    function isAdminV1() {
-      return isActiveV1() && currentUser().data.role == "admin";
-    }
-
-    /* =========================================================
-       V1 USERS
-    ========================================================= */
-
-    match /users/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
-      allow read: if isAdminV1();
-
-      allow create: if signedIn()
-        && request.auth.uid == uid
-        && request.resource.data.role == "user"
-        && request.resource.data.active == true;
-
-      allow update: if signedIn()
-        && request.auth.uid == uid
-        && request.resource.data.role == resource.data.role
-        && request.resource.data.active == resource.data.active;
-
-      allow create, update, delete: if isAdminV1();
-    }
-
-    /* =========================================================
-       V1 GLOBAL COLLECTIONS — TEMPORARY COMPATIBILITY
-       Keep until frontend cutover is complete.
-    ========================================================= */
-
-    match /repairs/{repairId} {
-      allow read: if isActiveV1();
-
-      allow create: if isActiveV1()
-        && request.resource.data.createdBy == request.auth.uid;
-
-      allow update: if isActiveV1()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          "status",
-          "statusNote",
-          "statusUpdatedBy",
-          "statusUpdatedByEmail",
-          "updatedAt"
-        ])
-        && request.resource.data.statusUpdatedBy == request.auth.uid;
-
-      allow delete: if isAdminV1();
-    }
-
-    match /customers/{customerId} {
-      allow read: if isActiveV1();
-      allow create, update: if isActiveV1();
-      allow delete: if isAdminV1();
-    }
-
-    match /references/{referenceId} {
-      allow read: if isActiveV1();
-      allow create, update, delete: if isAdminV1();
-    }
-
-    match /analytics/{document=**} {
-      allow read, write: if isAdminV1();
-    }
-
-    match /admin/{document=**} {
-      allow read, write: if isAdminV1();
-    }
-
-    /* =========================================================
-       V2 WORKSPACE HELPERS
-    ========================================================= */
 
     function workspaceDoc(workspaceId) {
       return get(/databases/$(database)/documents/workspaces/$(workspaceId));
@@ -137,7 +57,20 @@ service cloud.firestore {
         || isWorkspaceAdmin(workspaceId);
     }
 
-    function validAssignableRole(workspaceId, newRole) {
+    function canManageExistingRole(workspaceId, existingRole) {
+      return (
+        isOwner(workspaceId)
+        && existingRole in ["admin", "manager", "member"]
+      ) || (
+        isWorkspaceAdmin(workspaceId)
+        && existingRole in ["manager", "member"]
+      ) || (
+        isManager(workspaceId)
+        && existingRole == "member"
+      );
+    }
+
+    function canAssignRole(workspaceId, newRole) {
       return (
         isOwner(workspaceId)
         && newRole in ["admin", "manager", "member"]
@@ -150,9 +83,84 @@ service cloud.firestore {
       );
     }
 
-    /* =========================================================
-       V2 WORKSPACES
-    ========================================================= */
+    function memberRepairUpdateAllowed(workspaceId) {
+      return isWorkspaceMember(workspaceId)
+        && workspaceRole(workspaceId) == "member"
+        && !isFinalStatus(resource.data.status)
+        && request.time < resource.data.createdAt + duration.value(3, "h")
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.statusUpdatedBy == request.auth.uid
+        && request.resource.data.statusUpdatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "customerName", "phone", "deviceModel", "imei",
+          "issue", "customerNote", "price", "warrantyDays",
+          "status", "statusNote", "statusUpdatedBy",
+          "statusUpdatedByEmail", "statusUpdatedAt", "updatedAt"
+        ]);
+    }
+
+    function managerRepairUpdateAllowed(workspaceId) {
+      return isManagerUp(workspaceId)
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (
+          request.resource.data.status == resource.data.status
+          || (
+            request.resource.data.statusUpdatedBy == request.auth.uid
+            && request.resource.data.statusUpdatedAt == request.time
+            && (
+              !isFinalStatus(resource.data.status)
+              || (
+                request.resource.data.statusNote is string
+                && request.resource.data.statusNote.size() > 0
+              )
+            )
+          )
+        );
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.role == "user"
+        && request.resource.data.active == true;
+
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.active == resource.data.active
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "firstName", "lastName", "phone", "email",
+          "emailVerified", "phoneVerified", "updatedAt"
+        ]);
+
+      allow delete: if false;
+    }
+
+    match /repairs/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /customers/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /references/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /analytics/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /admin/{document=**} {
+      allow read, write: if false;
+    }
 
     match /workspaces/{workspaceId} {
       allow read: if isWorkspaceMember(workspaceId);
@@ -176,29 +184,32 @@ service cloud.firestore {
       allow delete: if false;
 
       match /members/{uid} {
-        allow read: if isWorkspaceMember(workspaceId);
+        // Direct membership document access
+          allow get: if signedIn()
+            && (
+              resource.data.uid == request.auth.uid
+              || isWorkspaceMember(workspaceId)
+            );
 
-        allow create: if (
-          signedIn()
+          // Collection-group discovery is restricted to the
+          // authenticated user's own membership documents.
+          allow list: if signedIn()
+            && resource.data.uid == request.auth.uid;
+
+        allow create: if signedIn()
           && uid == request.auth.uid
           && workspaceDoc(workspaceId).data.ownerUid == request.auth.uid
           && request.resource.data.uid == uid
           && request.resource.data.role == "owner"
-          && request.resource.data.status == "active"
-        ) || (
-          isManagerUp(workspaceId)
-          && uid != request.auth.uid
-          && request.resource.data.uid == uid
-          && request.resource.data.status in ["active", "invited"]
-          && validAssignableRole(workspaceId, request.resource.data.role)
-        );
+          && request.resource.data.status == "active";
 
         allow update: if isManagerUp(workspaceId)
           && uid != request.auth.uid
-          && resource.data.role != "owner"
-          && validAssignableRole(workspaceId, resource.data.role)
-          && validAssignableRole(workspaceId, request.resource.data.role)
+          && resource.data.uid == uid
           && request.resource.data.uid == resource.data.uid
+          && resource.data.role != "owner"
+          && canManageExistingRole(workspaceId, resource.data.role)
+          && canAssignRole(workspaceId, request.resource.data.role)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             "role", "status", "updatedAt"
           ]);
@@ -209,32 +220,14 @@ service cloud.firestore {
       match /repairs/{repairId} {
         allow read: if isWorkspaceMember(workspaceId);
 
-        /* Owner may copy historical jobs during migration.
-           Normal members must create jobs in their own identity. */
-        allow create: if isOwner(workspaceId)
-          || (
-            isWorkspaceMember(workspaceId)
-            && request.resource.data.createdBy == request.auth.uid
-            && request.resource.data.status == "waiting"
-          );
+        allow create: if isWorkspaceMember(workspaceId)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.status == "waiting"
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time;
 
-        allow update: if isManagerUp(workspaceId)
-          || (
-            isWorkspaceMember(workspaceId)
-            && workspaceRole(workspaceId) == "member"
-            && resource.data.status != "done"
-            && resource.data.status != "cancelled"
-            && request.time < resource.data.createdAt + duration.value(3, "h")
-            && request.resource.data.createdBy == resource.data.createdBy
-            && request.resource.data.createdAt == resource.data.createdAt
-            && request.resource.data.statusUpdatedBy == request.auth.uid
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              "customerName", "phone", "deviceModel", "imei",
-              "issue", "customerNote", "price", "warrantyDays",
-              "status", "statusNote", "statusUpdatedBy",
-              "statusUpdatedByEmail", "statusUpdatedAt", "updatedAt"
-            ])
-          );
+        allow update: if managerRepairUpdateAllowed(workspaceId)
+          || memberRepairUpdateAllowed(workspaceId);
 
         allow delete: if isAdminUp(workspaceId);
 
@@ -243,7 +236,11 @@ service cloud.firestore {
 
           allow create: if isWorkspaceMember(workspaceId)
             && request.resource.data.changedByUid == request.auth.uid
-            && request.resource.data.changedAt == request.time;
+            && request.resource.data.changedAt == request.time
+            && request.resource.data.toStatus ==
+              getAfter(
+                /databases/$(database)/documents/workspaces/$(workspaceId)/repairs/$(repairId)
+              ).data.status;
 
           allow update, delete: if false;
         }
@@ -273,8 +270,7 @@ service cloud.firestore {
       }
 
       match /invitations/{inviteId} {
-        allow read, create, update: if isAdminUp(workspaceId);
-        allow delete: if isOwner(workspaceId);
+        allow read, write: if false;
       }
 
       match /auditLogs/{logId} {
@@ -288,9 +284,20 @@ service cloud.firestore {
       }
     }
 
-    /* =========================================================
-       DEFAULT DENY
-    ========================================================= */
+    /*
+     * Collection-group membership discovery.
+     *
+     * Required by:
+     * collectionGroup(db, "members")
+     * where("uid", "==", request.auth.uid)
+     *
+     * Query can only return membership documents
+     * belonging to the authenticated user.
+     */
+    match /{path=**}/members/{uid} {
+      allow list: if signedIn()
+        && resource.data.uid == request.auth.uid;
+    }
 
     match /{document=**} {
       allow read, write: if false;
