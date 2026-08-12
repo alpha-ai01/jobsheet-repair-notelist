@@ -247,7 +247,7 @@
                 </h2>
 
                 <p class="text-xs text-slate-500 mt-1">
-                    บัญชีใหม่จะสร้างพื้นที่เก็บข้อมูลส่วนตัวของตัวเอง
+                    บัญชีใหม่จะมีสิทธิ์ User เป็นค่าเริ่มต้น
                 </p>
             </div>
 
@@ -257,38 +257,15 @@
 
             <form id="register_form" class="space-y-3">
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">
-                            ชื่อ
-                        </label>
-                        <input
-                            type="text"
-                            id="reg_first_name"
-                            placeholder="ชื่อ"
-                            required
-                            class="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">
-                            นามสกุล <span class="font-normal text-slate-400">(ไม่บังคับ)</span>
-                        </label>
-                        <input
-                            type="text"
-                            id="reg_last_name"
-                            placeholder="นามสกุล"
-                            class="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
-                    </div>
-                </div>
-
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">
-                        หมายเลขโทรศัพท์
+                        ชื่อผู้ใช้งาน
                     </label>
+
                     <input
-                        type="tel"
-                        id="reg_phone"
-                        placeholder="08XXXXXXXX"
+                        type="text"
+                        id="reg_username"
+                        placeholder="เช่น somchai"
                         required
                         class="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                 </div>
@@ -388,19 +365,7 @@
 
                 </div>
 
-                <div class="flex items-center gap-2 md:gap-3">
-
-                    <div class="hidden sm:flex items-center gap-2">
-                        <select id="workspace_switcher"
-                                onchange="setActiveWorkspace(this.value)"
-                                class="bg-slate-800 border border-slate-700 text-white text-[11px] rounded-xl px-2 py-2 max-w-48">
-                        </select>
-                        <button onclick="createPersonalWorkspace()"
-                                title="สร้างพื้นที่เก็บข้อมูลใหม่"
-                                class="px-2.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-bold">
-                            + ร้าน
-                        </button>
-                    </div>
+                <div class="flex items-center gap-3">
 
                     <div class="text-right hidden sm:block">
                         <div id="lbl_username"
@@ -461,12 +426,12 @@
                 </button>
 
                 <button onclick="navigate('analytics')" id="nav_analytics"
-                        class="nav-btn manager-only px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap">
+                        class="nav-btn admin-only px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap">
                     📊 Analytics
                 </button>
 
                 <button onclick="navigate('admin')" id="nav_admin"
-                        class="nav-btn manager-only px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap">
+                        class="nav-btn admin-only px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap">
                     👑 Admin
                 </button>
 
@@ -1025,32 +990,53 @@
         <section id="page_admin" class="page hidden space-y-4 admin-page">
 
             <div class="bg-white rounded-3xl p-5 soft-card">
-                <h2 class="font-black text-lg">👥 สมาชิก Workspace</h2>
+
+                <h2 class="font-black text-lg">
+                    👑 Admin
+                </h2>
+
                 <p class="text-xs text-slate-500 mt-1">
-                    Owner / Admin / Manager จัดการได้เฉพาะสมาชิกที่มีระดับต่ำกว่าตัวเอง
+                    จัดการสมาชิกและสิทธิ์ของระบบ
                 </p>
+
             </div>
+
 
             <div class="bg-white rounded-3xl p-5 soft-card">
+
                 <div class="flex gap-2 mb-4">
-                    <input id="admin_user_search"
-                           placeholder="ค้นหาชื่อ / Email"
-                           class="input flex-1">
-                    <button onclick="loadUsers()"
-                            class="bg-indigo-600 text-white px-5 rounded-xl text-xs font-bold">
+
+                    <input
+                        id="admin_user_search"
+                        placeholder="ค้นหาชื่อ / Email"
+                        class="input flex-1">
+
+                    <button
+                        onclick="loadUsers()"
+                        class="bg-indigo-600 text-white px-5 rounded-xl text-xs font-bold">
                         🔍
                     </button>
+
                 </div>
 
-                <div id="users_list" class="space-y-3"></div>
+                <div id="users_list"
+                     class="space-y-3">
+                </div>
+
             </div>
 
-            <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-                <p class="text-xs font-bold text-blue-800">ℹ️ การเพิ่มสมาชิกใหม่</p>
-                <p class="text-[11px] text-blue-700 mt-1">
-                    การเชิญสมาชิกใหม่ยังไม่เปิดในแพ็กเกจ Free
-                    ระบบจะเปิดเมื่อมีการเปิด Team/Subscription จริงเท่านั้น
+
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+
+                <p class="text-xs font-bold text-amber-800">
+                    ⚠️ หมายเหตุด้านความปลอดภัย
                 </p>
+
+                <p class="text-[11px] text-amber-700 mt-1">
+                    การสร้าง/ปิด Firebase Authentication User จริงควรทำผ่าน Firebase Admin SDK
+                    หรือ Backend ที่เชื่อถือได้ ไม่ควรใช้ Client HTML เป็นตัวจัดการ Auth โดยตรง
+                </p>
+
             </div>
 
         </section>
@@ -1117,7 +1103,7 @@
             </div>
 
 
-            <div class="hidden-force">
+            <div class="bg-white rounded-3xl p-5 soft-card">
 
                 <h3 class="font-bold">
                     📅 Export รายเดือน
@@ -1233,7 +1219,7 @@
             </button>
 
             <button onclick="navigate('analytics')" id="mnav_analytics"
-                    class="mobile-nav-btn manager-only rounded-xl py-2 text-[10px] font-bold">
+                    class="mobile-nav-btn admin-only rounded-xl py-2 text-[10px] font-bold">
                 📊<br>สถิติ
             </button>
 
@@ -1366,14 +1352,12 @@ import {
     signInWithEmailAndPassword,
     signOut,
     onAuthStateChanged,
-    sendPasswordResetEmail,
-    sendEmailVerification
+    sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 import {
     getFirestore,
     collection,
-    collectionGroup,
     doc,
     getDoc,
     getDocs,
@@ -1384,8 +1368,7 @@ import {
     orderBy,
     limit,
     where,
-    serverTimestamp,
-    writeBatch
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 
@@ -1784,10 +1767,8 @@ $("register_form").addEventListener("submit", async event => {
 
     event.preventDefault();
 
-    const firstName = $("reg_first_name").value.trim();
-    const lastName = $("reg_last_name").value.trim();
-    const phone = $("reg_phone").value.trim();
-    const email = $("reg_email").value.trim().toLowerCase();
+    const username = $("reg_username").value.trim();
+    const email = $("reg_email").value.trim();
     const password = $("reg_password").value;
     const confirm = $("reg_confirm_password").value;
 
@@ -1796,19 +1777,18 @@ $("register_form").addEventListener("submit", async event => {
 
     error.classList.add("hidden");
 
-    if (!firstName || !phone || !email) {
-        error.textContent = "❌ กรุณากรอกชื่อ เบอร์โทร และ Email";
-        error.classList.remove("hidden");
-        return;
-    }
-
     if (password !== confirm) {
-        error.textContent = "❌ รหัสผ่านทั้งสองช่องไม่ตรงกัน";
+
+        error.textContent =
+            "❌ รหัสผ่านทั้งสองช่องไม่ตรงกัน";
+
         error.classList.remove("hidden");
+
         return;
     }
 
     try {
+
         button.disabled = true;
         button.textContent = "⏳ กำลังสร้างบัญชี...";
 
@@ -1819,68 +1799,25 @@ $("register_form").addEventListener("submit", async event => {
                 password
             );
 
-        const uid = credential.user.uid;
-
+        /*
+         * User ใหม่มี role = user เสมอ
+         */
         await setDoc(
-            doc(db, "users", uid),
+            doc(db, "users", credential.user.uid),
             {
-                uid,
-                firstName,
-                lastName,
-                phone,
-                email,
-                role: "user",
+                uid: credential.user.uid,
+                username: username,
+                email: email,
+                role: "admin",
                 active: true,
-                emailVerified: false,
-                phoneVerified: false,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
-            }
+            },
+            { merge: true }
         );
-
-        const workspaceId =
-            `ws-${uid.slice(0, 8)}-${Date.now().toString(36)}`;
-
-        await setDoc(
-            doc(db, "workspaces", workspaceId),
-            {
-                name: `${firstName}${lastName ? " " + lastName : ""}`,
-                ownerUid: uid,
-                status: "active",
-                plan: "free",
-                subscriptionStatus: "active",
-                memberLimit: 1,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
-            }
-        );
-
-        await setDoc(
-            doc(db, "workspaces", workspaceId, "members", uid),
-            {
-                uid,
-                role: "owner",
-                status: "active",
-                email,
-                firstName,
-                lastName,
-                joinedAt: serverTimestamp(),
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
-            }
-        );
-
-        activeWorkspaceId = workspaceId;
-
-        localStorage.setItem(
-            "smartrepair.activeWorkspaceId",
-            workspaceId
-        );
-
-        await sendEmailVerification(credential.user);
 
         showToast(
-            "สร้างบัญชีและพื้นที่เก็บข้อมูลสำเร็จ กรุณาตรวจ Email เพื่อยืนยันบัญชี",
+            "สร้างบัญชีสำเร็จ",
             "success"
         );
 
@@ -1888,7 +1825,8 @@ $("register_form").addEventListener("submit", async event => {
 
         console.error(errorObject);
 
-        let message = "ไม่สามารถสร้างบัญชีได้";
+        let message =
+            "ไม่สามารถสร้างบัญชีได้";
 
         if (errorObject.code === "auth/email-already-in-use") {
             message = "Email นี้มีบัญชีอยู่แล้ว";
@@ -1902,10 +1840,14 @@ $("register_form").addEventListener("submit", async event => {
         error.classList.remove("hidden");
 
     } finally {
+
         button.disabled = false;
         button.textContent = "✨ สร้างบัญชี";
+
     }
+
 });
+
 
 /* =========================================================
    AUTH STATE
@@ -1928,7 +1870,7 @@ onAuthStateChanged(auth, async user => {
     try {
 
         await loadCurrentUserProfile();
-        await ensureActiveWorkspace();
+        await loadCurrentWorkspaceMembership();
 
         $("auth_area").classList.add("hidden");
         $("main_app").classList.remove("hidden");
@@ -2047,19 +1989,13 @@ function applyRoleUI() {
     document
         .querySelectorAll(".admin-only")
         .forEach(element => {
-            element.classList.toggle(
-                "hidden-force",
-                !isAdmin()
-            );
-        });
 
-    document
-        .querySelectorAll(".manager-only")
-        .forEach(element => {
-            element.classList.toggle(
-                "hidden-force",
-                !isManagerUp()
-            );
+            if (isAdmin()) {
+                element.classList.remove("hidden-force");
+            } else {
+                element.classList.add("hidden-force");
+            }
+
         });
 
 }
@@ -2172,24 +2108,15 @@ const pages = [
 window.navigate = function(page) {
 
     if (
-        ["analytics", "admin"].includes(page)
-        && !isManagerUp()
-    ) {
-        showToast(
-            "หน้านี้สำหรับ Manager ขึ้นไป",
-            "warning"
-        );
-        page = "dashboard";
-    }
-
-    if (
-        page === "export"
+        ["analytics", "admin", "export"].includes(page)
         && !isAdmin()
     ) {
+
         showToast(
-            "การส่งออกข้อมูลสำหรับ Owner/Admin เท่านั้น",
+            "หน้านี้สำหรับ Admin เท่านั้น",
             "warning"
         );
+
         page = "dashboard";
     }
 
@@ -2848,107 +2775,49 @@ window.requestStatusChange = function(jobId) {
 
 window.confirmStatusChange = async function() {
 
-    if (!pendingStatusJobId || !pendingStatusKey) {
-        return;
-    }
-
-    const job =
-        allJobs.find(item => item.id === pendingStatusJobId);
-
-    if (!job) {
+    if (
+        !pendingStatusJobId ||
+        !pendingStatusKey
+    ) {
         return;
     }
 
     try {
-        const note = $("status_note").value.trim();
 
-        const reopening =
-            ["done", "cancelled"].includes(job.status)
-            && !["done", "cancelled"].includes(pendingStatusKey);
+        const note =
+            $("status_note").value.trim();
 
-        if (reopening && !isManagerUp()) {
-            showToast(
-                "งานที่ปิดแล้วต้องให้ Manager ขึ้นไปเปิดใหม่",
-                "warning"
-            );
-            return;
-        }
-
-        if (reopening && !note) {
-            showToast(
-                "กรุณาระบุเหตุผลในการเปิดงานใหม่",
-                "warning"
-            );
-            return;
-        }
-
-        const batch = writeBatch(db);
-        const jobRef =
-            workspaceDoc("repairs", pendingStatusJobId);
-
-        batch.update(
-            jobRef,
+        await updateDoc(
+            workspaceDoc("repairs", pendingStatusJobId
+            ),
             {
-                status: pendingStatusKey,
-                statusNote: note,
-                statusUpdatedBy: currentUser.uid,
-                statusUpdatedByEmail: currentUser.email || "",
-                statusUpdatedAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
+                status:
+                    pendingStatusKey,
+
+                statusNote:
+                    note,
+
+                statusUpdatedBy:
+                    currentUser.uid,
+
+                statusUpdatedByEmail:
+                    currentUser.email || "",
+
+                updatedAt:
+                    serverTimestamp()
             }
         );
 
-        const historyRef =
-            doc(collection(jobRef, "statusHistory"));
 
-        batch.set(
-            historyRef,
-            {
-                fromStatus: job.status,
-                toStatus: pendingStatusKey,
-                note,
-                changedByUid: currentUser.uid,
-                changedByEmail: currentUser.email || "",
-                changedByRole: currentRole,
-                changedAt: serverTimestamp()
-            }
+        closeModal(
+            "status_modal"
         );
-
-        const auditRef =
-            doc(workspaceCollection("auditLogs"));
-
-        batch.set(
-            auditRef,
-            {
-                action: reopening
-                    ? "reopen_job"
-                    : "change_job_status",
-                targetType: "repair",
-                targetId: pendingStatusJobId,
-                actorUid: currentUser.uid,
-                actorEmail: currentUser.email || "",
-                actorRole: currentRole,
-                before: {
-                    status: job.status
-                },
-                after: {
-                    status: pendingStatusKey
-                },
-                note,
-                createdAt: serverTimestamp()
-            }
-        );
-
-        await batch.commit();
-
-        closeModal("status_modal");
 
         showToast(
-            reopening
-                ? "เปิดงานใหม่แล้ว"
-                : "อัปเดตสถานะแล้ว",
+            "อัปเดตสถานะแล้ว",
             "success"
         );
+
 
         pendingStatusJobId = null;
         pendingStatusKey = null;
@@ -2960,10 +2829,12 @@ window.confirmStatusChange = async function() {
         console.error(error);
 
         showToast(
-            "ไม่สามารถเปลี่ยนสถานะได้: " + error.message,
+            "ไม่สามารถเปลี่ยนสถานะได้",
             "error"
         );
+
     }
+
 };
 
 
@@ -3099,22 +2970,12 @@ window.openJobDetail = function(jobId) {
             อัปเดตล่าสุด: ${formatDate(job.updatedAt)}
         </div>
 
-        <div class="border-t pt-3">
-            <p class="text-xs font-black mb-2">🕒 ประวัติสถานะ</p>
-            <div id="detail_status_timeline"
-                 class="space-y-2 text-xs text-slate-600">
-                กำลังโหลด...
-            </div>
-        </div>
-
     `;
 
 
     $("job_detail_modal").classList.remove(
         "hidden"
     );
-
-    loadJobTimeline(jobId);
 
 };
 
@@ -3561,7 +3422,7 @@ function updateDashboard() {
 
 window.renderAnalytics = function() {
 
-    if (!isManagerUp()) {
+    if (!isAdmin()) {
         return;
     }
 
@@ -4299,599 +4160,6 @@ window.addEventListener(
 
     }
 );
-
-
-
-/* =========================================================
-   FINAL REAL WORKSPACE HELPERS
-========================================================= */
-
-let availableWorkspaces = [];
-
-async function loadAvailableWorkspaces() {
-
-    if (!currentUser) {
-        availableWorkspaces = [];
-        return [];
-    }
-
-    const memberQuery = query(
-        collectionGroup(db, "members"),
-        where("uid", "==", currentUser.uid)
-    );
-
-    const memberSnapshot = await getDocs(memberQuery);
-    const result = [];
-
-    for (const memberSnap of memberSnapshot.docs) {
-
-        const member = memberSnap.data();
-
-        if (member.status !== "active") {
-            continue;
-        }
-
-        const workspaceRef =
-            memberSnap.ref.parent.parent;
-
-        if (!workspaceRef) {
-            continue;
-        }
-
-        try {
-            const wsSnap =
-                await getDoc(workspaceRef);
-
-            if (!wsSnap.exists()) {
-                continue;
-            }
-
-            result.push({
-                id: wsSnap.id,
-                role: member.role,
-                ...wsSnap.data()
-            });
-
-        } catch (error) {
-            console.warn(
-                "Skip unavailable workspace",
-                workspaceRef.id,
-                error
-            );
-        }
-    }
-
-    availableWorkspaces = result;
-
-    const select = $("workspace_switcher");
-
-    if (select) {
-        select.innerHTML =
-            result.map(ws => `
-                <option value="${escapeHTML(ws.id)}"
-                    ${ws.id === activeWorkspaceId ? "selected" : ""}>
-                    ${escapeHTML(ws.name || ws.id)}
-                </option>
-            `).join("");
-    }
-
-    return result;
-}
-
-
-async function ensureActiveWorkspace() {
-
-    const workspaces =
-        await loadAvailableWorkspaces();
-
-    if (!workspaces.length) {
-        throw new Error(
-            "บัญชีนี้ยังไม่มี Workspace ที่ใช้งานได้"
-        );
-    }
-
-    const activeExists =
-        workspaces.some(
-            ws => ws.id === activeWorkspaceId
-        );
-
-    if (!activeExists) {
-        activeWorkspaceId =
-            workspaces[0].id;
-
-        localStorage.setItem(
-            "smartrepair.activeWorkspaceId",
-            activeWorkspaceId
-        );
-    }
-
-    await loadCurrentWorkspaceMembership();
-    await loadAvailableWorkspaces();
-}
-
-
-window.setActiveWorkspace = async function(id) {
-
-    if (!id || id === activeWorkspaceId) {
-        return;
-    }
-
-    activeWorkspaceId = id;
-
-    localStorage.setItem(
-        "smartrepair.activeWorkspaceId",
-        id
-    );
-
-    try {
-        await loadCurrentWorkspaceMembership();
-        await loadAvailableWorkspaces();
-
-        $("lbl_role").textContent =
-            currentRole.toUpperCase();
-
-        applyRoleUI();
-        await loadAllData();
-        navigate("dashboard");
-
-        showToast(
-            `เปลี่ยน Workspace เป็น ${currentWorkspace?.name || id}`,
-            "success"
-        );
-
-    } catch (error) {
-
-        console.error(error);
-
-        showToast(
-            "ไม่สามารถเปลี่ยน Workspace",
-            "error"
-        );
-    }
-};
-
-
-window.createPersonalWorkspace = async function() {
-
-    if (!currentUser) {
-        return;
-    }
-
-    const name =
-        prompt("ชื่อร้าน / Workspace ใหม่");
-
-    if (!name?.trim()) {
-        return;
-    }
-
-    try {
-        const id =
-            `ws-${currentUser.uid.slice(0, 8)}-${Date.now().toString(36)}`;
-
-        await setDoc(
-            doc(db, "workspaces", id),
-            {
-                name: name.trim(),
-                ownerUid: currentUser.uid,
-                status: "active",
-                plan: "free",
-                subscriptionStatus: "active",
-                memberLimit: 1,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
-            }
-        );
-
-        await setDoc(
-            doc(
-                db,
-                "workspaces",
-                id,
-                "members",
-                currentUser.uid
-            ),
-            {
-                uid: currentUser.uid,
-                role: "owner",
-                status: "active",
-                email: currentUser.email || "",
-                joinedAt: serverTimestamp(),
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
-            }
-        );
-
-        activeWorkspaceId = id;
-
-        localStorage.setItem(
-            "smartrepair.activeWorkspaceId",
-            id
-        );
-
-        await ensureActiveWorkspace();
-        applyRoleUI();
-        await loadAllData();
-
-        showToast(
-            "สร้าง Workspace ใหม่แล้ว",
-            "success"
-        );
-
-    } catch (error) {
-
-        console.error(error);
-
-        showToast(
-            "ไม่สามารถสร้าง Workspace: " + error.message,
-            "error"
-        );
-    }
-};
-
-
-function canManageMemberRole(role) {
-
-    if (currentRole === "owner") {
-        return ["admin", "manager", "member"].includes(role);
-    }
-
-    if (currentRole === "admin") {
-        return ["manager", "member"].includes(role);
-    }
-
-    if (currentRole === "manager") {
-        return role === "member";
-    }
-
-    return false;
-}
-
-
-function assignableRoles() {
-
-    if (currentRole === "owner") {
-        return ["admin", "manager", "member"];
-    }
-
-    if (currentRole === "admin") {
-        return ["manager", "member"];
-    }
-
-    if (currentRole === "manager") {
-        return ["member"];
-    }
-
-    return [];
-}
-
-
-window.loadUsers = async function() {
-
-    const container = $("users_list");
-
-    if (!container) {
-        return;
-    }
-
-    if (!isManagerUp()) {
-        container.innerHTML =
-            '<div class="text-xs text-red-600">ไม่มีสิทธิ์เข้าถึง</div>';
-        return;
-    }
-
-    container.innerHTML =
-        '<div class="text-xs text-slate-500 py-3">กำลังโหลดสมาชิก...</div>';
-
-    try {
-        const snap =
-            await getDocs(
-                workspaceCollection("members")
-            );
-
-        const keyword =
-            normalize(
-                $("admin_user_search")?.value || ""
-            );
-
-        const members = [];
-
-        snap.forEach(memberSnap => {
-            members.push({
-                id: memberSnap.id,
-                ...memberSnap.data()
-            });
-        });
-
-        const filtered =
-            members.filter(member => {
-                const text =
-                    normalize(`
-                        ${member.firstName || ""}
-                        ${member.lastName || ""}
-                        ${member.email || ""}
-                        ${member.role || ""}
-                    `);
-
-                return !keyword
-                    || text.includes(keyword);
-            });
-
-        if (!filtered.length) {
-            container.innerHTML =
-                '<div class="text-xs text-slate-500 py-3">ไม่พบสมาชิก</div>';
-            return;
-        }
-
-        container.innerHTML =
-            filtered.map(member => {
-
-                const editable =
-                    member.uid !== currentUser.uid
-                    && member.role !== "owner"
-                    && canManageMemberRole(member.role);
-
-                const roles =
-                    assignableRoles();
-
-                const roleControl =
-                    editable
-                    ? `
-                        <select id="member_role_${member.uid}"
-                                class="input text-xs">
-                            ${roles.map(role => `
-                                <option value="${role}"
-                                    ${member.role === role ? "selected" : ""}>
-                                    ${role.toUpperCase()}
-                                </option>
-                            `).join("")}
-                        </select>
-                    `
-                    : `
-                        <span class="status-badge status-waiting">
-                            ${(member.role || "member").toUpperCase()}
-                        </span>
-                    `;
-
-                const statusControl =
-                    editable
-                    ? `
-                        <select id="member_status_${member.uid}"
-                                class="input text-xs">
-                            <option value="active"
-                                ${member.status === "active" ? "selected" : ""}>
-                                ACTIVE
-                            </option>
-                            <option value="suspended"
-                                ${member.status === "suspended" ? "selected" : ""}>
-                                SUSPENDED
-                            </option>
-                        </select>
-                    `
-                    : `
-                        <span class="text-[10px] text-slate-500">
-                            ${escapeHTML(member.status || "active")}
-                        </span>
-                    `;
-
-                return `
-                    <div class="border rounded-2xl p-4">
-                        <div class="flex flex-col md:flex-row md:items-center gap-3">
-
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-black">
-                                    ${escapeHTML(
-                                        [member.firstName, member.lastName]
-                                            .filter(Boolean)
-                                            .join(" ")
-                                        || member.email
-                                        || member.uid
-                                    )}
-                                </p>
-                                <p class="text-[11px] text-slate-500 break-all">
-                                    ${escapeHTML(member.email || member.uid)}
-                                </p>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-2 md:w-72">
-                                ${roleControl}
-                                ${statusControl}
-                            </div>
-
-                            ${
-                                editable
-                                ? `
-                                    <button
-                                        onclick="saveWorkspaceMember('${member.uid}', '${member.role}', '${member.status || "active"}')"
-                                        class="bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold">
-                                        บันทึก
-                                    </button>
-                                `
-                                : ""
-                            }
-
-                        </div>
-                    </div>
-                `;
-            }).join("");
-
-    } catch (error) {
-
-        console.error(error);
-
-        container.innerHTML =
-            `<div class="text-xs text-red-600">
-                ไม่สามารถโหลดสมาชิก: ${escapeHTML(error.message)}
-             </div>`;
-    }
-};
-
-
-window.saveWorkspaceMember = async function(
-    uid,
-    oldRole,
-    oldStatus
-) {
-
-    if (!isManagerUp()) {
-        return;
-    }
-
-    const role =
-        $(`member_role_${uid}`)?.value
-        || oldRole;
-
-    const status =
-        $(`member_status_${uid}`)?.value
-        || oldStatus;
-
-    try {
-        const memberRef =
-            workspaceDoc("members", uid);
-
-        const batch = writeBatch(db);
-
-        batch.update(
-            memberRef,
-            {
-                role,
-                status,
-                updatedAt: serverTimestamp()
-            }
-        );
-
-        const auditRef =
-            doc(workspaceCollection("auditLogs"));
-
-        batch.set(
-            auditRef,
-            {
-                action: "update_member_access",
-                targetType: "member",
-                targetId: uid,
-                actorUid: currentUser.uid,
-                actorEmail: currentUser.email || "",
-                actorRole: currentRole,
-                before: {
-                    role: oldRole,
-                    status: oldStatus
-                },
-                after: {
-                    role,
-                    status
-                },
-                createdAt: serverTimestamp()
-            }
-        );
-
-        await batch.commit();
-
-        showToast(
-            "อัปเดตสิทธิ์สมาชิกแล้ว",
-            "success"
-        );
-
-        await loadUsers();
-
-    } catch (error) {
-
-        console.error(error);
-
-        showToast(
-            "ไม่สามารถแก้สิทธิ์สมาชิก: " + error.message,
-            "error"
-        );
-    }
-};
-
-
-async function loadJobTimeline(jobId) {
-
-    const container =
-        $("detail_status_timeline");
-
-    if (!container) {
-        return;
-    }
-
-    try {
-        const job =
-            allJobs.find(item => item.id === jobId);
-
-        const historySnapshot =
-            await getDocs(
-                collection(
-                    workspaceDoc("repairs", jobId),
-                    "statusHistory"
-                )
-            );
-
-        const history = [];
-
-        historySnapshot.forEach(item => {
-            history.push({
-                id: item.id,
-                ...item.data()
-            });
-        });
-
-        history.sort(
-            (a, b) =>
-                getTime(a.changedAt)
-                - getTime(b.changedAt)
-        );
-
-        const created =
-            job
-            ? `
-                <div class="bg-slate-50 rounded-xl p-3">
-                    <p class="font-bold">สร้าง JobSheet</p>
-                    <p class="text-[10px] text-slate-500 mt-1">
-                        ${formatDate(job.createdAt)}
-                    </p>
-                </div>
-            `
-            : "";
-
-        const items =
-            history.map(item => {
-                const from =
-                    getStatusMeta(item.fromStatus).label;
-
-                const to =
-                    getStatusMeta(item.toStatus).label;
-
-                return `
-                    <div class="bg-slate-50 rounded-xl p-3">
-                        <p class="font-bold">
-                            ${escapeHTML(from)} → ${escapeHTML(to)}
-                        </p>
-                        <p class="text-[10px] text-slate-500 mt-1">
-                            ${formatDate(item.changedAt)}
-                            • ${escapeHTML(item.changedByEmail || item.changedByUid || "-")}
-                            • ${escapeHTML((item.changedByRole || "").toUpperCase())}
-                        </p>
-                        ${
-                            item.note
-                            ? `<p class="text-[11px] mt-1">${escapeHTML(item.note)}</p>`
-                            : ""
-                        }
-                    </div>
-                `;
-            }).join("");
-
-        container.innerHTML =
-            created
-            + (items || '<div class="text-[11px] text-slate-400">ยังไม่มีการเปลี่ยนสถานะ</div>');
-
-    } catch (error) {
-
-        console.error(error);
-
-        container.innerHTML =
-            '<div class="text-[11px] text-red-500">โหลดประวัติสถานะไม่ได้</div>';
-    }
-}
-
 
 </script></body>
 </html>
