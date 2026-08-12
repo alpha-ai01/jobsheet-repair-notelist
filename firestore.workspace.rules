@@ -1,0 +1,241 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function workspaceDoc(workspaceId) {
+      return get(/databases/$(database)/documents/workspaces/$(workspaceId));
+    }
+
+    function memberDoc(workspaceId) {
+      return get(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
+    }
+
+    function isWorkspaceMember(workspaceId) {
+      return signedIn()
+        && memberDoc(workspaceId).data.status == "active";
+    }
+
+    function role(workspaceId) {
+      return memberDoc(workspaceId).data.role;
+    }
+
+    function isOwner(workspaceId) {
+      return isWorkspaceMember(workspaceId)
+        && role(workspaceId) == "owner"
+        && workspaceDoc(workspaceId).data.ownerUid == request.auth.uid;
+    }
+
+    function isAdmin(workspaceId) {
+      return isWorkspaceMember(workspaceId)
+        && role(workspaceId) == "admin";
+    }
+
+    function isManager(workspaceId) {
+      return isWorkspaceMember(workspaceId)
+        && role(workspaceId) == "manager";
+    }
+
+    function isManagerUp(workspaceId) {
+      return isOwner(workspaceId)
+        || isAdmin(workspaceId)
+        || isManager(workspaceId);
+    }
+
+    function isAdminUp(workspaceId) {
+      return isOwner(workspaceId)
+        || isAdmin(workspaceId);
+    }
+
+    function validAssignableRole(workspaceId, newRole) {
+      return (
+        isOwner(workspaceId)
+        && newRole in ["admin", "manager", "member"]
+      ) || (
+        isAdmin(workspaceId)
+        && newRole in ["manager", "member"]
+      ) || (
+        isManager(workspaceId)
+        && newRole == "member"
+      );
+    }
+
+    /* ---------------- USERS ---------------- */
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly([
+          "uid", "firstName", "lastName", "email", "phone",
+          "emailVerified", "phoneVerified", "createdAt", "updatedAt"
+        ]);
+
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "firstName", "lastName", "phone", "emailVerified",
+          "phoneVerified", "updatedAt"
+        ]);
+
+      allow delete: if false;
+    }
+
+    /* ---------------- WORKSPACES ---------------- */
+
+    match /workspaces/{workspaceId} {
+
+      allow read: if isWorkspaceMember(workspaceId);
+
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == "active"
+        && request.resource.data.plan == "free"
+        && request.resource.data.subscriptionStatus == "active"
+        && request.resource.data.memberLimit == 1;
+
+      allow update: if isOwner(workspaceId)
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.plan == resource.data.plan
+        && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus
+        && request.resource.data.memberLimit == resource.data.memberLimit
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "name", "status", "updatedAt"
+        ]);
+
+      allow delete: if false;
+
+      /* ---------------- MEMBERS ---------------- */
+
+      match /members/{uid} {
+        allow read: if isWorkspaceMember(workspaceId);
+
+        /* Workspace owner creates the first owner membership */
+        allow create: if (
+          signedIn()
+          && uid == request.auth.uid
+          && workspaceDoc(workspaceId).data.ownerUid == request.auth.uid
+          && request.resource.data.uid == uid
+          && request.resource.data.role == "owner"
+          && request.resource.data.status == "active"
+        ) || (
+          isManagerUp(workspaceId)
+          && uid != request.auth.uid
+          && request.resource.data.uid == uid
+          && request.resource.data.status in ["active", "invited"]
+          && validAssignableRole(workspaceId, request.resource.data.role)
+        );
+
+        allow update: if isManagerUp(workspaceId)
+          && uid != request.auth.uid
+          && resource.data.role != "owner"
+          && validAssignableRole(workspaceId, resource.data.role)
+          && validAssignableRole(workspaceId, request.resource.data.role)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "role", "status", "updatedAt"
+          ]);
+
+        allow delete: if false;
+      }
+
+      /* ---------------- REPAIRS ---------------- */
+
+      match /repairs/{repairId} {
+        allow read: if isWorkspaceMember(workspaceId);
+
+        allow create: if isWorkspaceMember(workspaceId)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.status == "waiting";
+
+        allow update: if isManagerUp(workspaceId)
+          || (
+            isWorkspaceMember(workspaceId)
+            && role(workspaceId) == "member"
+            && resource.data.status != "done"
+            && resource.data.status != "cancelled"
+            && request.time < resource.data.createdAt + duration.value(3, "h")
+            && request.resource.data.createdBy == resource.data.createdBy
+            && request.resource.data.createdAt == resource.data.createdAt
+            && request.resource.data.statusUpdatedBy == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "customerName", "phone", "deviceModel", "imei",
+              "issue", "customerNote", "price", "warrantyDays",
+              "status", "statusNote", "statusUpdatedBy",
+              "statusUpdatedByEmail", "statusUpdatedAt", "updatedAt"
+            ])
+          );
+
+        allow delete: if isAdminUp(workspaceId);
+
+        match /statusHistory/{historyId} {
+          allow read: if isWorkspaceMember(workspaceId);
+
+          allow create: if isWorkspaceMember(workspaceId)
+            && request.resource.data.changedByUid == request.auth.uid
+            && request.resource.data.changedAt == request.time;
+
+          allow update, delete: if false;
+        }
+      }
+
+      /* ---------------- CUSTOMERS ---------------- */
+
+      match /customers/{customerId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow create: if isWorkspaceMember(workspaceId);
+        allow update: if isManagerUp(workspaceId)
+          || (
+            isWorkspaceMember(workspaceId)
+            && role(workspaceId) == "member"
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "customerName", "phone", "note", "lastJobId",
+              "lastJobNumber", "updatedAt"
+            ])
+          );
+        allow delete: if isAdminUp(workspaceId);
+      }
+
+      /* ---------------- REFERENCES ---------------- */
+
+      match /references/{referenceId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow create, update: if isManagerUp(workspaceId);
+        allow delete: if isAdminUp(workspaceId);
+      }
+
+      /* ---------------- INVITATIONS ---------------- */
+
+      match /invitations/{inviteId} {
+        allow read: if isAdminUp(workspaceId);
+        allow create, update: if isAdminUp(workspaceId);
+        allow delete: if isOwner(workspaceId);
+      }
+
+      /* ---------------- AUDIT LOGS ---------------- */
+
+      match /auditLogs/{logId} {
+        allow read: if isManagerUp(workspaceId);
+
+        allow create: if isWorkspaceMember(workspaceId)
+          && request.resource.data.actorUid == request.auth.uid
+          && request.resource.data.createdAt == request.time;
+
+        allow update, delete: if false;
+      }
+    }
+
+    /* ---------------- DEFAULT DENY ---------------- */
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
