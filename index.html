@@ -1357,7 +1357,7 @@ import {
 
 import {
     getFirestore,
-    collection,
+    collection, collectionGroup,
     doc,
     getDoc,
     getDocs,
@@ -1429,6 +1429,114 @@ function workspaceDoc(name, id) {
         id
     );
 }
+
+
+async function discoverUserWorkspaces() {
+    if (!currentUser) return [];
+
+    const membershipQuery = query(
+        collectionGroup(db, "members"),
+        where("uid", "==", currentUser.uid)
+    );
+
+    const membershipSnapshot = await getDocs(membershipQuery);
+    const memberships = [];
+
+    membershipSnapshot.forEach((memberSnap) => {
+        const member = memberSnap.data();
+
+        if (member.status !== "active") return;
+
+        const workspaceRef = memberSnap.ref.parent.parent;
+        if (!workspaceRef) return;
+
+        memberships.push({
+            id: workspaceRef.id,
+            role: member.role || "member"
+        });
+    });
+
+    return memberships;
+}
+
+async function resolveActiveWorkspace() {
+    const memberships = await discoverUserWorkspaces();
+
+    if (!memberships.length) {
+        throw new Error("ไม่พบ Workspace ที่บัญชีนี้มีสิทธิ์ใช้งาน");
+    }
+
+    const savedWorkspaceId =
+        localStorage.getItem("smartrepair.activeWorkspaceId");
+
+    const selected =
+        memberships.find(
+            item => item.id === savedWorkspaceId
+        ) || memberships[0];
+
+    activeWorkspaceId = selected.id;
+
+    localStorage.setItem(
+        "smartrepair.activeWorkspaceId",
+        activeWorkspaceId
+    );
+
+    renderWorkspaceSwitcher(memberships);
+
+    return activeWorkspaceId;
+}
+
+function renderWorkspaceSwitcher(memberships) {
+    let select =
+        document.getElementById("workspace_switcher");
+
+    if (!select) {
+        select = document.createElement("select");
+        select.id = "workspace_switcher";
+        select.className =
+            "bg-slate-800 border border-slate-700 text-white " +
+            "text-xs rounded-xl px-2 py-2 max-w-52";
+
+        select.addEventListener("change", async (event) => {
+            const workspaceId = event.target.value;
+
+            localStorage.setItem(
+                "smartrepair.activeWorkspaceId",
+                workspaceId
+            );
+
+            if (typeof window.setActiveWorkspace === "function") {
+                await window.setActiveWorkspace(workspaceId);
+            } else {
+                location.reload();
+            }
+        });
+
+        const host =
+            document.querySelector("#main_app header") ||
+            document.querySelector("header");
+
+        if (host) {
+            host.prepend(select);
+        }
+    }
+
+    select.innerHTML = "";
+
+    memberships.forEach((item) => {
+        const option = document.createElement("option");
+
+        option.value = item.id;
+        option.textContent =
+            item.id + " (" + item.role + ")";
+
+        option.selected =
+            item.id === activeWorkspaceId;
+
+        select.appendChild(option);
+    });
+}
+
 
 async function loadCurrentWorkspaceMembership() {
 
@@ -1808,7 +1916,7 @@ $("register_form").addEventListener("submit", async event => {
                 uid: credential.user.uid,
                 username: username,
                 email: email,
-                role: "admin",
+                role: "user",
                 active: true,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
@@ -1870,6 +1978,7 @@ onAuthStateChanged(auth, async user => {
     try {
 
         await loadCurrentUserProfile();
+        await resolveActiveWorkspace();
         await loadCurrentWorkspaceMembership();
 
         $("auth_area").classList.add("hidden");
@@ -2802,6 +2911,7 @@ window.confirmStatusChange = async function() {
 
                 statusUpdatedByEmail:
                     currentUser.email || "",
+                statusUpdatedAt: serverTimestamp(),
 
                 updatedAt:
                     serverTimestamp()
