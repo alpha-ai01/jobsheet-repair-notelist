@@ -1485,8 +1485,26 @@ async function ensurePersonalWorkspace(
     preferredName = ""
 ) {
 
+    /*
+     * SMARTREPAIR_CORE_REPAIR_V1
+     *
+     * Secure bootstrap contract:
+     * 1. Read the caller's own membership document first.
+     * 2. If membership exists, validate it before reading Workspace.
+     * 3. If membership does not exist, CREATE the deterministic
+     *    personal Workspace without first reading a missing parent.
+     * 4. If CREATE reports permission-denied because an orphan
+     *    Workspace already exists, perform the narrowly-authorized
+     *    owner recovery GET and then create owner membership.
+     *
+     * This avoids the Workspace-read-before-membership
+     * chicken-and-egg failure without broadening Workspace access.
+     */
+
     if (!user) {
-        throw new Error("ยังไม่ได้เข้าสู่ระบบ");
+        throw new Error(
+            "ยังไม่ได้เข้าสู่ระบบ"
+        );
     }
 
     const workspaceId =
@@ -1499,43 +1517,6 @@ async function ensurePersonalWorkspace(
             workspaceId
         );
 
-    const existingWorkspace =
-        await getDoc(workspaceRef);
-
-    if (!existingWorkspace.exists()) {
-
-        await setDoc(
-            workspaceRef,
-            {
-                name:
-                    preferredName
-                    || user.email?.split("@")[0]
-                    || "Smart Repair",
-
-                ownerUid:
-                    user.uid,
-
-                status:
-                    "active",
-
-                plan:
-                    "free",
-
-                subscriptionStatus:
-                    "active",
-
-                memberLimit:
-                    1,
-
-                createdAt:
-                    serverTimestamp(),
-
-                updatedAt:
-                    serverTimestamp()
-            }
-        );
-    }
-
     const memberRef =
         doc(
             db,
@@ -1545,37 +1526,190 @@ async function ensurePersonalWorkspace(
             user.uid
         );
 
+    console.info(
+        "[WORKSPACE] bootstrap: checking own membership"
+    );
+
     const memberSnapshot =
         await getDoc(memberRef);
 
-    if (!memberSnapshot.exists()) {
+    if (memberSnapshot.exists()) {
 
-        await setDoc(
-            memberRef,
-            {
-                uid:
-                    user.uid,
+        const membership =
+            memberSnapshot.data();
 
-                role:
-                    "owner",
+        if (membership.status !== "active") {
+            throw new Error(
+                "Personal Workspace membership ถูกระงับ"
+            );
+        }
 
-                status:
-                    "active",
+        const workspaceSnapshot =
+            await getDoc(workspaceRef);
 
-                email:
-                    user.email || "",
+        if (!workspaceSnapshot.exists()) {
 
-                joinedAt:
-                    serverTimestamp(),
-
-                createdAt:
-                    serverTimestamp(),
-
-                updatedAt:
-                    serverTimestamp()
+            if (membership.role !== "owner") {
+                throw new Error(
+                    "พบ Membership แต่ไม่พบ Workspace"
+                );
             }
+
+            /*
+             * Firestore permits subcollection documents to exist
+             * even when the parent document is absent.
+             * Recover that malformed legacy state only for Owner.
+             */
+            await setDoc(
+                workspaceRef,
+                {
+                    name:
+                        preferredName
+                        || user.email?.split("@")[0]
+                        || "Smart Repair",
+
+                    ownerUid:
+                        user.uid,
+
+                    status:
+                        "active",
+
+                    plan:
+                        "free",
+
+                    subscriptionStatus:
+                        "active",
+
+                    memberLimit:
+                        1,
+
+                    createdAt:
+                        serverTimestamp(),
+
+                    updatedAt:
+                        serverTimestamp()
+                }
+            );
+        }
+
+        return workspaceId;
+    }
+
+    const bootstrapData = {
+        name:
+            preferredName
+            || user.email?.split("@")[0]
+            || "Smart Repair",
+
+        ownerUid:
+            user.uid,
+
+        status:
+            "active",
+
+        plan:
+            "free",
+
+        subscriptionStatus:
+            "active",
+
+        memberLimit:
+            1,
+
+        createdAt:
+            serverTimestamp(),
+
+        updatedAt:
+            serverTimestamp()
+    };
+
+    let workspaceReady = false;
+
+    try {
+
+        /*
+         * Important: no GET before this CREATE attempt.
+         * For a truly new user this is a document CREATE.
+         */
+        await setDoc(
+            workspaceRef,
+            bootstrapData
+        );
+
+        workspaceReady = true;
+
+        console.info(
+            "[WORKSPACE] personal workspace created"
+        );
+
+    } catch (error) {
+
+        if (error?.code !== "permission-denied") {
+            throw error;
+        }
+
+        /*
+         * A deterministic personal Workspace may already exist
+         * from partial/legacy registration while membership is
+         * missing. Rules permit only its recorded owner to GET it.
+         */
+        console.info(
+            "[WORKSPACE] checking owner recovery path"
+        );
+
+        const existingWorkspace =
+            await getDoc(workspaceRef);
+
+        if (
+            !existingWorkspace.exists()
+            || existingWorkspace.data().ownerUid !== user.uid
+        ) {
+            throw error;
+        }
+
+        workspaceReady = true;
+    }
+
+    if (!workspaceReady) {
+        throw new Error(
+            "ไม่สามารถเตรียม Personal Workspace ได้"
         );
     }
+
+    await setDoc(
+        memberRef,
+        {
+            uid:
+                user.uid,
+
+            role:
+                "owner",
+
+            status:
+                "active",
+
+            email:
+                user.email || "",
+
+            displayName:
+                preferredName
+                || user.email?.split("@")[0]
+                || "User",
+
+            joinedAt:
+                serverTimestamp(),
+
+            createdAt:
+                serverTimestamp(),
+
+            updatedAt:
+                serverTimestamp()
+        }
+    );
+
+    console.info(
+        "[MEMBERSHIP] personal owner membership ready"
+    );
 
     return workspaceId;
 }
@@ -1767,32 +1901,30 @@ function renderWorkspaceSwitcher(memberships) {
 
 async function loadCurrentWorkspaceMembership() {
 
+    /*
+     * SMARTREPAIR_CORE_REPAIR_V1
+     * Validate Membership before reading the protected parent
+     * Workspace document.
+     */
+
     if (!currentUser || !activeWorkspaceId) {
         return;
     }
 
-    const wsSnap = await getDoc(
-        doc(db, "workspaces", activeWorkspaceId)
+    console.info(
+        "[MEMBERSHIP] validating active membership"
     );
 
-    if (!wsSnap.exists()) {
-        throw new Error("ไม่พบ Workspace");
-    }
-
-    currentWorkspace = {
-        id: wsSnap.id,
-        ...wsSnap.data()
-    };
-
-    const memberSnap = await getDoc(
-        doc(
-            db,
-            "workspaces",
-            activeWorkspaceId,
-            "members",
-            currentUser.uid
-        )
-    );
+    const memberSnap =
+        await getDoc(
+            doc(
+                db,
+                "workspaces",
+                activeWorkspaceId,
+                "members",
+                currentUser.uid
+            )
+        );
 
     if (!memberSnap.exists()) {
         throw new Error(
@@ -1800,7 +1932,8 @@ async function loadCurrentWorkspaceMembership() {
         );
     }
 
-    const membership = memberSnap.data();
+    const membership =
+        memberSnap.data();
 
     if (membership.status !== "active") {
         throw new Error(
@@ -1809,11 +1942,38 @@ async function loadCurrentWorkspaceMembership() {
     }
 
     currentRole =
-        ["owner","admin","manager","member"]
+        ["owner", "admin", "manager", "member"]
             .includes(membership.role)
             ? membership.role
             : "member";
+
+    console.info(
+        `[MEMBERSHIP] active role resolved: ${currentRole}`
+    );
+
+    const wsSnap =
+        await getDoc(
+            doc(
+                db,
+                "workspaces",
+                activeWorkspaceId
+            )
+        );
+
+    if (!wsSnap.exists()) {
+        throw new Error(
+            "ไม่พบ Workspace"
+        );
+    }
+
+    currentWorkspace = {
+        id:
+            wsSnap.id,
+
+        ...wsSnap.data()
+    };
 }
+
 
 window.setActiveWorkspace = async function(id) {
     if (!id) return;
@@ -2306,14 +2466,19 @@ onAuthStateChanged(auth, async user => {
 
         await loadCurrentUserProfile();
 
+        console.info(
+            "[PROFILE] user profile ready"
+        );
+
         /*
-         * Guarantee that every registered account has
-         * one directly-addressable Personal Workspace
-         * before collection-group workspace discovery.
+         * SMARTREPAIR_CORE_REPAIR_V1
+         * Discover memberships BEFORE bootstrapping a new
+         * Personal Workspace. resolveActiveWorkspace() performs
+         * bootstrap only when discovery succeeds with no active
+         * memberships.
          */
-        await ensurePersonalWorkspace(
-            user,
-            getDisplayName()
+        console.info(
+            "[WORKSPACE] discovering active memberships"
         );
 
         await resolveActiveWorkspace();

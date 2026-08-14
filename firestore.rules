@@ -163,7 +163,22 @@ service cloud.firestore {
     }
 
     match /workspaces/{workspaceId} {
-      allow read: if isWorkspaceMember(workspaceId);
+      /*
+       * SMARTREPAIR_CORE_REPAIR_V1
+       *
+       * Normal Workspace reads require active membership.
+       * Bootstrap recovery additionally permits GET only when
+       * the stored ownerUid equals the authenticated caller.
+       *
+       * Workspace collection listing remains denied.
+       */
+      allow get: if (
+          signedIn()
+          && resource.data.ownerUid == request.auth.uid
+        )
+        || isWorkspaceMember(workspaceId);
+
+      allow list: if false;
 
       allow create: if signedIn()
         && request.resource.data.ownerUid == request.auth.uid
@@ -185,14 +200,22 @@ service cloud.firestore {
 
       match /members/{uid} {
         // Direct membership document access
+          /*
+           * Caller may GET their own membership path even when
+           * the document does not yet exist. This is required for
+           * safe bootstrap without exposing another user's member doc.
+           */
           allow get: if signedIn()
             && (
-              resource.data.uid == request.auth.uid
+              uid == request.auth.uid
               || isWorkspaceMember(workspaceId)
             );
 
-          // Collection-group discovery is restricted to the
-          // authenticated user's own membership documents.
+          /*
+           * Keep direct collection listing restricted here.
+           * Team roster policy is handled in SCRIPT 2 after the
+           * Team/Assignment query contract is validated together.
+           */
           allow list: if signedIn()
             && resource.data.uid == request.auth.uid;
 
