@@ -196,12 +196,44 @@ service cloud.firestore {
           allow list: if signedIn()
             && resource.data.uid == request.auth.uid;
 
+        /*
+         * Membership creation:
+         *
+         * 1) Workspace owner bootstrap.
+         * 2) Authenticated recipient joining from an accepted invitation.
+         */
         allow create: if signedIn()
           && uid == request.auth.uid
-          && workspaceDoc(workspaceId).data.ownerUid == request.auth.uid
-          && request.resource.data.uid == uid
-          && request.resource.data.role == "owner"
-          && request.resource.data.status == "active";
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.status == "active"
+          && (
+            (
+              workspaceDoc(workspaceId).data.ownerUid == request.auth.uid
+              && request.resource.data.role == "owner"
+            )
+            ||
+            (
+              request.resource.data.invitationId is string
+              && request.resource.data.role in [
+                "admin",
+                "manager",
+                "member"
+              ]
+              && get(
+                /databases/$(database)/documents/workspaces/$(workspaceId)/invitations/$(request.resource.data.invitationId)
+              ).data.status == "accepted"
+              && get(
+                /databases/$(database)/documents/workspaces/$(workspaceId)/invitations/$(request.resource.data.invitationId)
+              ).data.respondedByUid == request.auth.uid
+              && get(
+                /databases/$(database)/documents/workspaces/$(workspaceId)/invitations/$(request.resource.data.invitationId)
+              ).data.role == request.resource.data.role
+              && request.auth.token.email != null
+              && get(
+                /databases/$(database)/documents/workspaces/$(workspaceId)/invitations/$(request.resource.data.invitationId)
+              ).data.emailLower == request.auth.token.email.lower()
+            )
+          );
 
         allow update: if isManagerUp(workspaceId)
           && uid != request.auth.uid
@@ -214,7 +246,18 @@ service cloud.firestore {
             "role", "status", "updatedAt"
           ]);
 
-        allow delete: if false;
+        /*
+         * Remove member:
+         * Manager+ may remove only a lower role.
+         * Nobody can remove themselves or the Owner.
+         */
+        allow delete: if isManagerUp(workspaceId)
+          && uid != request.auth.uid
+          && resource.data.role != "owner"
+          && canManageExistingRole(
+               workspaceId,
+               resource.data.role
+             );
       }
 
       match /repairs/{repairId} {
