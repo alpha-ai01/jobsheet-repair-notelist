@@ -188,14 +188,14 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">
-                        Username หรือ Email
+                        Email
                     </label>
 
                     <input
-                        type="text"
+                        type="email"
                         id="txt_username"
                         autocomplete="username"
-                        placeholder="เช่น admin หรือ admin@email.com"
+                        placeholder="example@email.com"
                         required
                         class="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                 </div>
@@ -1610,16 +1610,66 @@ async function discoverUserWorkspaces() {
 }
 
 async function resolveActiveWorkspace() {
-    const memberships = await discoverUserWorkspaces();
+
+    let memberships = [];
+
+    try {
+
+        memberships =
+            await discoverUserWorkspaces();
+
+    } catch (error) {
+
+        console.warn(
+            "Workspace discovery fallback:",
+            error
+        );
+
+        /*
+         * Login must not completely fail only because
+         * collection-group discovery is temporarily unavailable.
+         */
+        const personalWorkspaceId =
+            `ws-${currentUser.uid}`;
+
+        const personalMemberRef =
+            doc(
+                db,
+                "workspaces",
+                personalWorkspaceId,
+                "members",
+                currentUser.uid
+            );
+
+        const personalMember =
+            await getDoc(personalMemberRef);
+
+        if (personalMember.exists()) {
+
+            memberships = [{
+                id: personalWorkspaceId,
+                role:
+                    personalMember.data().role
+                    || "owner"
+            }];
+
+        } else {
+            throw error;
+        }
+    }
 
     if (!memberships.length) {
 
-        await ensurePersonalWorkspace(
-            currentUser,
-            getDisplayName()
-        );
+        const personalWorkspaceId =
+            await ensurePersonalWorkspace(
+                currentUser,
+                getDisplayName()
+            );
 
-        return resolveActiveWorkspace();
+        memberships = [{
+            id: personalWorkspaceId,
+            role: "owner"
+        }];
     }
 
     const savedWorkspaceId =
@@ -2013,15 +2063,20 @@ $("login_form").addEventListener("submit", async event => {
         `;
 
         /*
-         * รองรับทั้ง Email จริง และ Username แบบเดิม
+         * Firebase Authentication account is created
+         * using the real registration Email.
+         *
+         * Username remains a profile/display field only.
          */
-        const isEmail =
-            username.includes("@");
-
         const email =
-            isEmail
-                ? username.toLowerCase()
-                : `${username.toLowerCase()}@smartrepair.local`;
+            username.trim().toLowerCase();
+
+        if (!email.includes("@")) {
+            throw {
+                code: "auth/invalid-email",
+                message: "Please use the Email used during registration."
+            };
+        }
 
         await signInWithEmailAndPassword(
             auth,
@@ -2047,14 +2102,8 @@ $("login_form").addEventListener("submit", async event => {
             case "auth/wrong-password":
             case "auth/user-not-found":
 
-                if (!username.includes("@")) {
-                    message =
-                        "Username นี้ไม่สามารถเข้าสู่ระบบได้ " +
-                        "หากเป็นบัญชีใหม่ กรุณาใช้อีเมลที่สมัคร";
-                } else {
-                    message =
-                        "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
-                }
+                message =
+                    "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
 
                 break;
 
@@ -2256,6 +2305,17 @@ onAuthStateChanged(auth, async user => {
     try {
 
         await loadCurrentUserProfile();
+
+        /*
+         * Guarantee that every registered account has
+         * one directly-addressable Personal Workspace
+         * before collection-group workspace discovery.
+         */
+        await ensurePersonalWorkspace(
+            user,
+            getDisplayName()
+        );
+
         await resolveActiveWorkspace();
         await loadCurrentWorkspaceMembership();
 
