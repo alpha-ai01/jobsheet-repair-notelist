@@ -270,7 +270,103 @@ service cloud.firestore {
       }
 
       match /invitations/{inviteId} {
-        allow read, write: if false;
+
+        /*
+         * Workspace invitations
+         *
+         * Owner/Admin:
+         * - create invitations
+         * - read invitations inside their workspace
+         * - cancel pending invitations
+         *
+         * Recipient:
+         * - read only invitation matching authenticated email
+         * - accept/decline only their own invitation
+         *
+         * Passwords are NEVER stored here.
+         */
+
+        allow get: if signedIn()
+          && (
+            isAdminUp(workspaceId)
+            ||
+            (
+              request.auth.token.email != null
+              && resource.data.emailLower ==
+                 request.auth.token.email.lower()
+            )
+          );
+
+        allow list: if signedIn()
+          && (
+            isAdminUp(workspaceId)
+            ||
+            (
+              request.auth.token.email != null
+              && resource.data.emailLower ==
+                 request.auth.token.email.lower()
+            )
+          );
+
+        allow create: if isAdminUp(workspaceId)
+          && request.resource.data.invitedByUid ==
+             request.auth.uid
+          && request.resource.data.emailLower is string
+          && request.resource.data.role in [
+            "admin",
+            "manager",
+            "member"
+          ]
+          && request.resource.data.status == "pending"
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time;
+
+        /*
+         * Owner/Admin can cancel.
+         * Recipient can accept or decline only own invitation.
+         */
+        allow update: if signedIn()
+          && request.resource.data.emailLower ==
+             resource.data.emailLower
+          && request.resource.data.invitedByUid ==
+             resource.data.invitedByUid
+          && request.resource.data.role ==
+             resource.data.role
+          && request.resource.data.createdAt ==
+             resource.data.createdAt
+          && request.resource.data.diff(resource.data)
+             .affectedKeys()
+             .hasOnly([
+               "status",
+               "respondedByUid",
+               "respondedAt",
+               "updatedAt"
+             ])
+          && request.resource.data.updatedAt == request.time
+          && (
+            (
+              isAdminUp(workspaceId)
+              && resource.data.status == "pending"
+              && request.resource.data.status == "cancelled"
+            )
+            ||
+            (
+              request.auth.token.email != null
+              && resource.data.emailLower ==
+                 request.auth.token.email.lower()
+              && resource.data.status == "pending"
+              && request.resource.data.respondedByUid ==
+                 request.auth.uid
+              && request.resource.data.respondedAt ==
+                 request.time
+              && request.resource.data.status in [
+                "accepted",
+                "declined"
+              ]
+            )
+          );
+
+        allow delete: if false;
       }
 
       match /auditLogs/{logId} {
@@ -297,6 +393,20 @@ service cloud.firestore {
     match /{path=**}/members/{uid} {
       allow list: if signedIn()
         && resource.data.uid == request.auth.uid;
+    }
+
+    /*
+     * Collection-group invitation discovery.
+     *
+     * Query requirement:
+     * collectionGroup(db, "invitations")
+     * where("emailLower", "==", authenticated email)
+     */
+    match /{path=**}/invitations/{inviteId} {
+      allow list: if signedIn()
+        && request.auth.token.email != null
+        && resource.data.emailLower ==
+           request.auth.token.email.lower();
     }
 
     match /{document=**} {
