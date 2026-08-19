@@ -1,38 +1,28 @@
-import { collection, doc, getDoc, getDocs, addDoc, updateDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, doc, query, where, getDocs, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { db } from "../firebase/client.js";
 
-const JOBSHEET_COLLECTION = "jobsheets";
-
 export const JobsheetRepository = {
-    async create(data, userId) {
-        const docRef = await addDoc(collection(db, JOBSHEET_COLLECTION), {
-            ...data,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            createdBy: userId,
-            updatedBy: userId
+    async create(groupId, data, userId) {
+        // Implementation note: Job number generation should be handled in a transaction
+        // or using a secure counter if needed for uniqueness.
+        // For now, simplify with a client-generated ID or basic auto-increment simulation.
+        const jobsheetRef = doc(collection(db, "groups", groupId, "jobsheets"));
+        
+        await runTransaction(db, async (transaction) => {
+            transaction.set(jobsheetRef, {
+                ...data,
+                groupId,
+                createdBy: userId,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
         });
-        return docRef.id;
+        return jobsheetRef.id;
     },
 
-    async getAll() {
-        const q = query(collection(db, JOBSHEET_COLLECTION), orderBy("createdAt", "desc"));
+    async getAll(groupId) {
+        const q = query(collection(db, "groups", groupId, "jobsheets"));
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    },
-
-    async getById(id) {
-        const docRef = doc(db, JOBSHEET_COLLECTION, id);
-        const snapshot = await getDoc(docRef);
-        return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
-    },
-
-    async update(id, data, userId) {
-        const docRef = doc(db, JOBSHEET_COLLECTION, id);
-        await updateDoc(docRef, {
-            ...data,
-            updatedAt: serverTimestamp(),
-            updatedBy: userId
-        });
     }
 };
