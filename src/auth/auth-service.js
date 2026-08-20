@@ -1,6 +1,6 @@
 import { auth, db } from "../firebase/client.js";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { doc, setDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 export const AuthService = {
     async register(email, password, displayName) {
@@ -22,6 +22,10 @@ export const AuthService = {
     
     async logout() {
         return await signOut(auth);
+    },
+
+    async sendResetEmail(email) {
+        return await sendPasswordResetEmail(auth, email);
     },
 
     getCurrentUser() {
