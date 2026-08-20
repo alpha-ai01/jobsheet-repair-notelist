@@ -48,11 +48,29 @@ service cloud.firestore {
       allow read, list: if signedIn() && (resource == null || resource.data.uid == request.auth.uid);
     }
 
-    match /workspaces/{workspaceId} {
-      allow read: if signedIn() && isWorkspaceMember(workspaceId);
-      allow create: if signedIn() && emailVerified() && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if signedIn() && isOwner(workspaceId)
-        && request.resource.data.ownerUid == resource.data.ownerUid;
+    match /entitlements/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /subscriptions/{subscriptionId} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /payments/{paymentId} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /userSessions/{uid}/sessions/{sessionId} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /groups/{groupId} {
+      allow read: if signedIn() && isWorkspaceMember(groupId); // Assuming group member check
+      // ... rest of rules
 
       match /members/{uid} {
         allow read: if signedIn() && isWorkspaceMember(workspaceId);
