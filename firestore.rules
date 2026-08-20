@@ -11,20 +11,20 @@ service cloud.firestore {
       return request.auth.token.email_verified == true;
     }
 
-    function isGroupMember(groupId) {
-      return exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+    function isWorkspaceMember(workspaceId) {
+      return exists(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
     }
 
-    function getMembership(groupId) {
-      return get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+    function getMembership(workspaceId) {
+      return get(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
     }
 
-    function isOwner(groupId) {
-      return isGroupMember(groupId) && getMembership(groupId).data.role == "owner";
+    function isOwner(workspaceId) {
+      return isWorkspaceMember(workspaceId) && getMembership(workspaceId).data.role == "owner";
     }
 
-    function isOwnerOrManager(groupId) {
-      return isGroupMember(groupId) && (getMembership(groupId).data.role == "owner" || getMembership(groupId).data.role == "manager");
+    function isOwnerOrManager(workspaceId) {
+      return isWorkspaceMember(workspaceId) && (getMembership(workspaceId).data.role == "owner" || getMembership(workspaceId).data.role == "manager");
     }
 
     match /users/{uid} {
@@ -33,28 +33,26 @@ service cloud.firestore {
 
     match /usernames/{username} {
       allow read: if signedIn();
-      // TODO: Move to trusted backend resolution
-      allow write: if signedIn() 
-        && request.resource.data.uid == request.auth.uid;
+      allow write: if signedIn() && request.resource.data.uid == request.auth.uid;
     }
 
-    match /groups/{groupId} {
-      allow read: if signedIn() && isGroupMember(groupId);
+    match /workspaces/{workspaceId} {
+      allow read: if signedIn() && isWorkspaceMember(workspaceId);
       allow create: if signedIn() && emailVerified() && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if signedIn() && isOwner(groupId);
+      allow update: if signedIn() && isOwner(workspaceId);
 
       match /members/{uid} {
-        allow read: if signedIn() && isGroupMember(groupId);
-        allow create: if signedIn() && emailVerified() && isOwnerOrManager(groupId);
-        allow update: if signedIn() && isOwnerOrManager(groupId);
-        allow delete: if signedIn() && isOwner(groupId);
+        allow read: if signedIn() && isWorkspaceMember(workspaceId);
+        allow create: if signedIn() && emailVerified() && isOwnerOrManager(workspaceId);
+        allow update: if signedIn() && isOwnerOrManager(workspaceId);
+        allow delete: if signedIn() && isOwner(workspaceId);
       }
 
-      match /jobsheets/{jobId} {
-        allow read: if signedIn() && isGroupMember(groupId);
-        allow create: if signedIn() && emailVerified() && isGroupMember(groupId);
-        allow update: if signedIn() && isGroupMember(groupId);
-        allow delete: if signedIn() && isOwner(groupId);
+      match /repairs/{repairId} {
+        allow read: if signedIn() && isWorkspaceMember(workspaceId);
+        allow create: if signedIn() && emailVerified() && isWorkspaceMember(workspaceId);
+        allow update: if signedIn() && isWorkspaceMember(workspaceId);
+        allow delete: if signedIn() && isOwner(workspaceId);
       }
     }
   }
