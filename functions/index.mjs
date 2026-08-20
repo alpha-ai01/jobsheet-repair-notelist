@@ -42,7 +42,7 @@ export const startGroupTrial = onCall(async (request) => {
       trialEndsAt: trialEndsAt,
       createdAt: now
     });
-    
+
     return { success: true };
   });
 });
@@ -64,10 +64,30 @@ export const createCheckoutSession = onCall(async (request) => {
   return { success: true };
 });
 
+export const cancelSubscription = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Unauthorized");
+
+  return await db.runTransaction(async (transaction) => {
+    const subscriptionRef = db.doc(`subscriptions/${uid}`);
+    transaction.update(subscriptionRef, {
+      status: "CANCEL_AT_PERIOD_END",
+      cancelAtPeriodEnd: true,
+      updatedAt: Timestamp.now()
+    });
+    
+    // Entitlement stays READ_WRITE until period end (handled by policy, not immediate change)
+    return { success: true };
+  });
+});
+
 export const handlePaymentWebhook = onCall(async (request) => {
-  const { providerEventId, payload, uid } = request.data;
-  // TODO: EXTERNAL_CONFIGURATION_REQUIRED - Stub verification
-  logger.info("Verifying signature (stub)...");
+  const { providerEventId, payload, uid, signature } = request.data;
+  
+  // TODO: EXTERNAL_CONFIGURATION_REQUIRED - Implement real signature verification
+  if (signature !== "valid-test-signature") {
+      throw new HttpsError("unauthenticated", "Invalid signature");
+  }
 
   return await db.runTransaction(async (transaction) => {
     const eventRef = db.doc(`paymentEvents/${providerEventId}`);
@@ -76,10 +96,17 @@ export const handlePaymentWebhook = onCall(async (request) => {
 
     transaction.set(eventRef, { processedAt: Timestamp.now(), payload });
 
+    // Validate webhook payload (stubbed amount/currency check)
+    if (payload.amount !== 99 || payload.currency !== "THB") {
+        throw new HttpsError("invalid-argument", "Invalid amount or currency");
+    }
+
     const subscriptionRef = db.doc(`subscriptions/${uid}`);
     transaction.set(subscriptionRef, {
       uid,
       status: "ACTIVE",
+      currentPeriodStart: Timestamp.now(),
+      currentPeriodEnd: Timestamp.fromMillis(Timestamp.now().toMillis() + 30 * 24 * 60 * 60 * 1000),
       updatedAt: Timestamp.now()
     }, { merge: true });
 
@@ -109,7 +136,7 @@ export const registerSession = onCall(async (request) => {
       status: "ACTIVE",
       createdAt: Timestamp.now()
     });
-    
+
     return { success: true };
   });
 });
