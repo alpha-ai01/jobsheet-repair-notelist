@@ -33,7 +33,9 @@ service cloud.firestore {
 
     match /usernames/{username} {
       allow read: if signedIn();
-      allow write: if false; // Managed by backend transaction
+      // TODO: Move to trusted backend resolution
+      allow write: if signedIn() 
+        && request.resource.data.uid == request.auth.uid;
     }
 
     match /groups/{groupId} {

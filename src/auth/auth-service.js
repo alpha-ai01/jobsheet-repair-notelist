@@ -1,6 +1,9 @@
 import { auth, db } from "../firebase/client.js";
 import { 
     createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut, 
+    sendPasswordResetEmail, 
     sendEmailVerification 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
@@ -26,7 +29,7 @@ export const AuthService = {
         const user = userCredential.user;
         
         try {
-            // 3. Reserve Username
+            // 3. Reserve Username (Temporary direct client write, see TODO in firestore.rules)
             await setDoc(usernameRef, { uid: user.uid });
             
             // 4. Create Profile
@@ -36,7 +39,7 @@ export const AuthService = {
                 username,
                 usernameCanonical,
                 displayName,
-                emailVerified: false, // Trusted auth claim only
+                emailVerified: false, 
                 accountStatus: "active",
                 createdAt: serverTimestamp()
             });
@@ -44,11 +47,27 @@ export const AuthService = {
             // 5. Send Verification
             await sendEmailVerification(user);
         } catch (error) {
-            // Basic compensation: try to delete user if profile fails
+            // Cleanup: delete Auth user if profile fails
             await user.delete();
             throw error;
         }
         
         return user;
+    },
+    
+    async login(email, password) {
+        return await signInWithEmailAndPassword(auth, email, password);
+    },
+    
+    async logout() {
+        return await signOut(auth);
+    },
+
+    async sendResetEmail(email) {
+        return await sendPasswordResetEmail(auth, email);
+    },
+
+    getCurrentUser() {
+        return auth.currentUser;
     }
 };
