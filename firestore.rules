@@ -19,12 +19,20 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
     }
 
+    function role(workspaceId) {
+      return getMembership(workspaceId).data.role;
+    }
+
     function isOwner(workspaceId) {
-      return isWorkspaceMember(workspaceId) && getMembership(workspaceId).data.role == "owner";
+      return isWorkspaceMember(workspaceId) && role(workspaceId) == "owner";
     }
 
     function isOwnerOrManager(workspaceId) {
-      return isWorkspaceMember(workspaceId) && (getMembership(workspaceId).data.role == "owner" || getMembership(workspaceId).data.role == "manager");
+      return isWorkspaceMember(workspaceId) && (role(workspaceId) == "owner" || role(workspaceId) == "manager");
+    }
+
+    function isManager(workspaceId) {
+      return isWorkspaceMember(workspaceId) && role(workspaceId) == "manager";
     }
 
     match /users/{uid} {
@@ -36,23 +44,64 @@ service cloud.firestore {
       allow write: if signedIn() && request.resource.data.uid == request.auth.uid;
     }
 
+    match /{path=**}/members/{uid} {
+      allow read, list: if signedIn() && (resource == null || resource.data.uid == request.auth.uid);
+    }
+
     match /workspaces/{workspaceId} {
       allow read: if signedIn() && isWorkspaceMember(workspaceId);
       allow create: if signedIn() && emailVerified() && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if signedIn() && isOwner(workspaceId);
+      allow update: if signedIn() && isOwner(workspaceId)
+        && request.resource.data.ownerUid == resource.data.ownerUid;
 
       match /members/{uid} {
         allow read: if signedIn() && isWorkspaceMember(workspaceId);
-        allow create: if signedIn() && emailVerified() && isOwnerOrManager(workspaceId);
-        allow update: if signedIn() && isOwnerOrManager(workspaceId);
-        allow delete: if signedIn() && isOwner(workspaceId);
+        
+        // Workspace owner creates the first owner membership, or team members are created on non-free plan
+        allow create: if (
+          signedIn()
+          && uid == request.auth.uid
+          && get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.ownerUid == request.auth.uid
+          && request.resource.data.uid == uid
+          && request.resource.data.role == "owner"
+          && request.resource.data.status == "active"
+        ) || (
+          signedIn() && emailVerified() && isOwnerOrManager(workspaceId)
+          && (role(workspaceId) == "owner" || (role(workspaceId) == "manager" && request.resource.data.role == "member"))
+          && get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.plan != "free"
+        );
+
+        allow update: if signedIn() && isOwnerOrManager(workspaceId)
+          && (role(workspaceId) == "owner" && resource.data.role != "owner" && request.resource.data.role != "owner")
+          || (role(workspaceId) == "manager" && resource.data.role != "owner" && request.resource.data.role != "owner" && resource.data.role != "manager" && request.resource.data.role != "manager");
+          
+        allow delete: if signedIn() && isOwner(workspaceId) && resource.data.role != "owner";
       }
 
       match /repairs/{repairId} {
         allow read: if signedIn() && isWorkspaceMember(workspaceId);
-        allow create: if signedIn() && emailVerified() && isWorkspaceMember(workspaceId);
-        allow update: if signedIn() && isWorkspaceMember(workspaceId);
+        allow create: if signedIn() && emailVerified() && isWorkspaceMember(workspaceId) 
+          && request.resource.data.createdBy == request.auth.uid;
+        allow update: if isOwner(workspaceId)
+          || (isManager(workspaceId) && (
+               (resource.data.status != "done" || request.resource.data.status != "repairing") 
+               || (request.resource.data.statusNote != null && request.resource.data.statusNote != "")
+             ))
+          || (
+            isWorkspaceMember(workspaceId)
+            && role(workspaceId) == "member"
+            && resource.data.status != "done"
+            && resource.data.status != "cancelled"
+            && request.time < resource.data.createdAt + duration.value(3, "h")
+            && request.resource.data.statusUpdatedBy == request.auth.uid
+          );
         allow delete: if signedIn() && isOwner(workspaceId);
+      }
+      
+      match /auditLogs/{logId} {
+        allow read: if signedIn() && isOwnerOrManager(workspaceId);
+        allow create: if signedIn() && isWorkspaceMember(workspaceId) && request.resource.data.actorUid == request.auth.uid;
+        allow update, delete: if false;
       }
     }
   }

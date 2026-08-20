@@ -29,7 +29,7 @@ before(async () => {
     projectId: PROJECT_ID,
     firestore: {
       host: "127.0.0.1",
-      port: 8081,
+      port: 8080,
       rules: fs.readFileSync("firestore.rules", "utf8")
     }
   });
@@ -125,7 +125,8 @@ after(async () => {
 
 const dbFor = uid =>
   env.authenticatedContext(uid, {
-    email: `${uid}@test.com`
+    email: `${uid}@test.com`,
+    email_verified: true
   }).firestore();
 
 test("anonymous cannot read workspace", async () => {
