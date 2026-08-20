@@ -1,31 +1,58 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function emailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
     function isGroupMember(groupId) {
       return exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+    }
+
+    function getMembership(groupId) {
+      return get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+    }
+
+    function isOwner(groupId) {
+      return isGroupMember(groupId) && getMembership(groupId).data.role == "owner";
+    }
+
+    function isOwnerOrManager(groupId) {
+      return isGroupMember(groupId) && (getMembership(groupId).data.role == "owner" || getMembership(groupId).data.role == "manager");
     }
 
     match /users/{uid} {
       allow read, write: if signedIn() && request.auth.uid == uid;
     }
 
+    match /usernames/{username} {
+      allow read: if signedIn();
+      allow write: if false; // Managed by backend transaction
+    }
+
     match /groups/{groupId} {
       allow read: if signedIn() && isGroupMember(groupId);
-      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow create: if signedIn() && emailVerified() && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if signedIn() && isOwner(groupId);
 
       match /members/{uid} {
         allow read: if signedIn() && isGroupMember(groupId);
-        allow write: if signedIn() && request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.ownerUid;
+        allow create: if signedIn() && emailVerified() && isOwnerOrManager(groupId);
+        allow update: if signedIn() && isOwnerOrManager(groupId);
+        allow delete: if signedIn() && isOwner(groupId);
       }
 
       match /jobsheets/{jobId} {
         allow read: if signedIn() && isGroupMember(groupId);
-        allow create: if signedIn() && isGroupMember(groupId);
+        allow create: if signedIn() && emailVerified() && isGroupMember(groupId);
         allow update: if signedIn() && isGroupMember(groupId);
-        allow delete: if false;
+        allow delete: if signedIn() && isOwner(groupId);
       }
     }
   }

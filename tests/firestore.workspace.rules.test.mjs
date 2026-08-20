@@ -40,9 +40,6 @@ beforeEach(async () => {
     await setDoc(doc(db, "users/ownerA"), {
       uid: "ownerA", firstName: "Owner", email: "ownerA@test.com"
     });
-    await setDoc(doc(db, "users/adminA"), {
-      uid: "adminA", firstName: "Admin", email: "adminA@test.com"
-    });
     await setDoc(doc(db, "users/managerA"), {
       uid: "managerA", firstName: "Manager", email: "managerA@test.com"
     });
@@ -63,8 +60,7 @@ beforeEach(async () => {
     });
 
     for (const [uid, role] of [
-      ["ownerA", "owner"], ["adminA", "admin"],
-      ["managerA", "manager"], ["memberA", "member"]
+      ["ownerA", "owner"], ["managerA", "manager"], ["memberA", "member"]
     ]) {
       await setDoc(doc(db, `workspaces/A/members/${uid}`), {
         uid, role, status: "active"
@@ -180,8 +176,8 @@ test("member cannot delete job", async () => {
   await assertFails(deleteDoc(doc(dbFor("memberA"), "workspaces/A/repairs/recentJob")));
 });
 
-test("admin can delete job", async () => {
-  await assertSucceeds(deleteDoc(doc(dbFor("adminA"), "workspaces/A/repairs/recentJob")));
+test("owner can delete job", async () => {
+  await assertSucceeds(deleteDoc(doc(dbFor("ownerA"), "workspaces/A/repairs/recentJob")));
 });
 
 test("manager can create member membership", async () => {
@@ -190,39 +186,14 @@ test("manager can create member membership", async () => {
   }));
 });
 
-test("manager cannot create admin membership", async () => {
-  await assertFails(setDoc(doc(dbFor("managerA"), "workspaces/A/members/newAdmin"), {
-    uid: "newAdmin", role: "admin", status: "active"
-  }));
-});
-
-test("admin can create manager membership", async () => {
-  await assertSucceeds(setDoc(doc(dbFor("adminA"), "workspaces/A/members/newManager"), {
+test("owner can create manager membership", async () => {
+  await assertSucceeds(setDoc(doc(dbFor("ownerA"), "workspaces/A/members/newManager"), {
     uid: "newManager", role: "manager", status: "active"
-  }));
-});
-
-test("admin cannot create another admin", async () => {
-  await assertFails(setDoc(doc(dbFor("adminA"), "workspaces/A/members/admin2"), {
-    uid: "admin2", role: "admin", status: "active"
-  }));
-});
-
-test("owner can create admin membership", async () => {
-  await assertSucceeds(setDoc(doc(dbFor("ownerA"), "workspaces/A/members/admin2"), {
-    uid: "admin2", role: "admin", status: "active"
   }));
 });
 
 test("member cannot change memberships", async () => {
   await assertFails(updateDoc(doc(dbFor("memberA"), "workspaces/A/members/managerA"), {
-    role: "member",
-    updatedAt: serverTimestamp()
-  }));
-});
-
-test("manager cannot change admin", async () => {
-  await assertFails(updateDoc(doc(dbFor("managerA"), "workspaces/A/members/adminA"), {
     role: "member",
     updatedAt: serverTimestamp()
   }));

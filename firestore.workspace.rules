@@ -30,33 +30,18 @@ service cloud.firestore {
         && workspaceDoc(workspaceId).data.ownerUid == request.auth.uid;
     }
 
-    function isAdmin(workspaceId) {
-      return isWorkspaceMember(workspaceId)
-        && role(workspaceId) == "admin";
-    }
-
     function isManager(workspaceId) {
       return isWorkspaceMember(workspaceId)
         && role(workspaceId) == "manager";
     }
 
-    function isManagerUp(workspaceId) {
-      return isOwner(workspaceId)
-        || isAdmin(workspaceId)
-        || isManager(workspaceId);
-    }
-
-    function isAdminUp(workspaceId) {
-      return isOwner(workspaceId)
-        || isAdmin(workspaceId);
+    function isOwnerOrManager(workspaceId) {
+      return isOwner(workspaceId) || isManager(workspaceId);
     }
 
     function validAssignableRole(workspaceId, newRole) {
       return (
         isOwner(workspaceId)
-        && newRole in ["admin", "manager", "member"]
-      ) || (
-        isAdmin(workspaceId)
         && newRole in ["manager", "member"]
       ) || (
         isManager(workspaceId)
@@ -126,14 +111,14 @@ service cloud.firestore {
           && request.resource.data.role == "owner"
           && request.resource.data.status == "active"
         ) || (
-          isManagerUp(workspaceId)
+          isOwnerOrManager(workspaceId)
           && uid != request.auth.uid
           && request.resource.data.uid == uid
           && request.resource.data.status in ["active", "invited"]
           && validAssignableRole(workspaceId, request.resource.data.role)
         );
 
-        allow update: if isManagerUp(workspaceId)
+        allow update: if isOwnerOrManager(workspaceId)
           && uid != request.auth.uid
           && resource.data.role != "owner"
           && validAssignableRole(workspaceId, resource.data.role)
@@ -155,7 +140,7 @@ service cloud.firestore {
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.status == "waiting";
 
-        allow update: if isManagerUp(workspaceId)
+        allow update: if isOwnerOrManager(workspaceId)
           || (
             isWorkspaceMember(workspaceId)
             && role(workspaceId) == "member"
@@ -173,7 +158,7 @@ service cloud.firestore {
             ])
           );
 
-        allow delete: if isAdminUp(workspaceId);
+        allow delete: if isOwner(workspaceId);
 
         match /statusHistory/{historyId} {
           allow read: if isWorkspaceMember(workspaceId);
@@ -191,7 +176,7 @@ service cloud.firestore {
       match /customers/{customerId} {
         allow read: if isWorkspaceMember(workspaceId);
         allow create: if isWorkspaceMember(workspaceId);
-        allow update: if isManagerUp(workspaceId)
+        allow update: if isOwnerOrManager(workspaceId)
           || (
             isWorkspaceMember(workspaceId)
             && role(workspaceId) == "member"
@@ -200,29 +185,29 @@ service cloud.firestore {
               "lastJobNumber", "updatedAt"
             ])
           );
-        allow delete: if isAdminUp(workspaceId);
+        allow delete: if isOwner(workspaceId);
       }
 
       /* ---------------- REFERENCES ---------------- */
 
       match /references/{referenceId} {
         allow read: if isWorkspaceMember(workspaceId);
-        allow create, update: if isManagerUp(workspaceId);
-        allow delete: if isAdminUp(workspaceId);
+        allow create, update: if isOwnerOrManager(workspaceId);
+        allow delete: if isOwner(workspaceId);
       }
 
       /* ---------------- INVITATIONS ---------------- */
 
       match /invitations/{inviteId} {
-        allow read: if isAdminUp(workspaceId);
-        allow create, update: if isAdminUp(workspaceId);
+        allow read: if isOwnerOrManager(workspaceId);
+        allow create, update: if isOwnerOrManager(workspaceId);
         allow delete: if isOwner(workspaceId);
       }
 
       /* ---------------- AUDIT LOGS ---------------- */
 
       match /auditLogs/{logId} {
-        allow read: if isManagerUp(workspaceId);
+        allow read: if isOwnerOrManager(workspaceId);
 
         allow create: if isWorkspaceMember(workspaceId)
           && request.resource.data.actorUid == request.auth.uid

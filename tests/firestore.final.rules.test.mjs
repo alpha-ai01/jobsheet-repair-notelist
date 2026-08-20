@@ -41,7 +41,7 @@ beforeEach(async () => {
   await env.withSecurityRulesDisabled(async ctx => {
     const db = ctx.firestore();
 
-    for (const uid of ["ownerA", "adminA", "managerA", "memberA", "ownerB"]) {
+    for (const uid of ["ownerA", "managerA", "memberA", "ownerB"]) {
       await setDoc(doc(db, "users", uid), {
         uid,
         firstName: uid,
@@ -71,7 +71,6 @@ beforeEach(async () => {
 
     for (const [uid, role] of [
       ["ownerA", "owner"],
-      ["adminA", "admin"],
       ["managerA", "manager"],
       ["memberA", "member"]
     ]) {
@@ -248,9 +247,9 @@ test("member cannot delete job", async () => {
   );
 });
 
-test("admin can delete job", async () => {
+test("owner can delete job", async () => {
   await assertSucceeds(
-    deleteDoc(doc(dbFor("adminA"), "workspaces/A/repairs/recent"))
+    deleteDoc(doc(dbFor("ownerA"), "workspaces/A/repairs/recent"))
   );
 });
 
@@ -264,19 +263,9 @@ test("manager can suspend member", async () => {
   );
 });
 
-test("manager cannot modify admin", async () => {
-  await assertFails(
-    updateDoc(doc(dbFor("managerA"), "workspaces/A/members/adminA"), {
-      role: "member",
-      status: "active",
-      updatedAt: serverTimestamp()
-    })
-  );
-});
-
-test("admin can demote manager to member", async () => {
+test("owner can demote manager to member", async () => {
   await assertSucceeds(
-    updateDoc(doc(dbFor("adminA"), "workspaces/A/members/managerA"), {
+    updateDoc(doc(dbFor("ownerA"), "workspaces/A/members/managerA"), {
       role: "member",
       status: "active",
       updatedAt: serverTimestamp()
@@ -284,10 +273,10 @@ test("admin can demote manager to member", async () => {
   );
 });
 
-test("admin cannot modify owner", async () => {
+test("owner cannot modify owner", async () => {
   await assertFails(
-    updateDoc(doc(dbFor("adminA"), "workspaces/A/members/ownerA"), {
-      role: "admin",
+    updateDoc(doc(dbFor("ownerA"), "workspaces/A/members/ownerA"), {
+      role: "manager",
       status: "active",
       updatedAt: serverTimestamp()
     })
