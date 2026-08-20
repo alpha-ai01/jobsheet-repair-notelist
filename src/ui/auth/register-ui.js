@@ -26,7 +26,7 @@ export function initRegisterUI(onSuccess, onBack) {
         if (pass !== confirm) return alert("รหัสผ่านไม่ตรงกัน");
         
         try {
-            await AuthService.register(email, pass, name);
+            await AuthService.register(email, pass, name, name);
             onSuccess();
         } catch (e) {
             document.getElementById("reg_error").textContent = e.message;
