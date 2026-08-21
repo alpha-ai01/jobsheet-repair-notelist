@@ -13,7 +13,7 @@ export function initGroupUI(onGroupCreated) {
 
     document.getElementById("createGroupBtn").addEventListener("click", async () => {
         const name = document.getElementById("groupName").value;
-        const groupId = await GroupRepository.createGroup(name, auth.currentUser);
+        const groupId = await GroupRepository.createGroup(name);
         onGroupCreated(groupId);
     });
 }

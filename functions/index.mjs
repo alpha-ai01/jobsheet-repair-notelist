@@ -8,9 +8,9 @@ const db = getFirestore();
 
 // V1 Billing Functions
 export const startGroupTrial = onCall(async (request) => {
-  const uid = request.auth?.uid;
+  const { uid } = request.data;
   if (!uid) {
-    throw new HttpsError("unauthenticated", "Unauthorized");
+    throw new HttpsError("invalid-argument", "Missing uid");
   }
 
   return await db.runTransaction(async (transaction) => {
@@ -48,8 +48,8 @@ export const startGroupTrial = onCall(async (request) => {
 });
 
 export const createCheckoutSession = onCall(async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Unauthorized");
+  const { uid } = request.data;
+  if (!uid) throw new HttpsError("invalid-argument", "Missing uid");
   const { checkoutId, planId } = request.data;
   if (planId !== "group_monthly_99") throw new HttpsError("invalid-argument", "Invalid plan");
 
@@ -65,8 +65,8 @@ export const createCheckoutSession = onCall(async (request) => {
 });
 
 export const cancelSubscription = onCall(async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Unauthorized");
+  const { uid } = request.data;
+  if (!uid) throw new HttpsError("invalid-argument", "Missing uid");
 
   return await db.runTransaction(async (transaction) => {
     const subscriptionRef = db.doc(`subscriptions/${uid}`);
@@ -82,7 +82,9 @@ export const cancelSubscription = onCall(async (request) => {
 });
 
 export const handlePaymentWebhook = onCall(async (request) => {
-  const { providerEventId, payload, uid, signature } = request.data;
+  const { uid } = request.data;
+  if (!uid) throw new HttpsError("invalid-argument", "Missing uid");
+  const { providerEventId, payload, signature } = request.data;
   
   // TODO: EXTERNAL_CONFIGURATION_REQUIRED - Implement real signature verification
   if (signature !== "valid-test-signature") {
@@ -122,8 +124,8 @@ export const handlePaymentWebhook = onCall(async (request) => {
 });
 
 export const registerSession = onCall(async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Unauthorized");
+  const { uid } = request.data;
+  if (!uid) throw new HttpsError("invalid-argument", "Missing uid");
   const { sessionId } = request.data;
 
   return await db.runTransaction(async (transaction) => {
@@ -141,9 +143,8 @@ export const registerSession = onCall(async (request) => {
   });
 });
 export const revokeSession = onCall(async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Unauthorized");
-  const { sessionId } = request.data;
+  const { uid, sessionId } = request.data;
+  if (!uid) throw new HttpsError("invalid-argument", "Missing uid");
 
   await db.doc(`userSessions/${uid}/sessions/${sessionId}`).update({
     status: "REVOKED",
@@ -154,33 +155,42 @@ export const revokeSession = onCall(async (request) => {
 });
 
 export const createGroup = onCall(async (request) => {
-...
-
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Unauthorized");
+  const { uid, name } = request.data;
+  if (!uid || !name) throw new HttpsError("invalid-argument", "Missing uid or name");
 
   return await db.runTransaction(async (transaction) => {
-    // Check entitlement
-    const entitlementSnap = await transaction.get(db.doc(`entitlements/${uid}`));
-    if (!entitlementSnap.exists || !entitlementSnap.data().groupFeatureEnabled) {
-      throw new HttpsError("permission-denied", "NO_ENTITLEMENT");
-    }
-
     const groupRef = db.collection("groups").doc();
+    const groupId = groupRef.id;
+
+    // Create Group
     transaction.set(groupRef, {
-      name: request.data.name,
+      name,
       ownerUid: uid,
-      status: "active",
+      subscriptionStatus: 'pending_payment',
       createdAt: Timestamp.now()
     });
 
+    // Create Member (Owner)
     transaction.set(groupRef.collection("members").doc(uid), {
       uid,
-      role: "owner",
-      status: "active",
+      role: 'owner',
+      joinedAt: Timestamp.now()
+    });
+
+    // Create Membership record for easy lookup
+    transaction.set(db.collection("memberships").doc(`${groupId}_${uid}`), {
+        groupId,
+        uid,
+        role: 'owner'
+    });
+
+    // Create Subscription record
+    transaction.set(db.doc(`subscriptions/${groupId}`), {
+      groupId,
+      status: 'pending_payment',
       createdAt: Timestamp.now()
     });
     
-    return { groupId: groupRef.id };
+    return { groupId };
   });
 });

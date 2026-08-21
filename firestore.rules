@@ -1,126 +1,63 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    function signedIn() {
+    
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    function emailVerified() {
-      return request.auth.token.email_verified == true;
+    function getMemberData(groupId) {
+      return get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
     }
 
-    function isWorkspaceMember(workspaceId) {
-      return exists(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
+    function getRole(groupId) {
+      return getMemberData(groupId).data.role;
     }
 
-    function getMembership(workspaceId) {
-      return get(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
+    function isSubscriptionActive(groupId) {
+      return get(/databases/$(database)/documents/groups/$(groupId)).data.subscriptionStatus == 'active';
     }
 
-    function role(workspaceId) {
-      return getMembership(workspaceId).data.role;
+    function isOwner(groupId) {
+      return isSignedIn() && getRole(groupId) == 'owner';
     }
 
-    function isOwner(workspaceId) {
-      return isWorkspaceMember(workspaceId) && role(workspaceId) == "owner";
+    function isManager(groupId) {
+      return isSignedIn() && getRole(groupId) == 'manager';
     }
 
-    function isOwnerOrManager(workspaceId) {
-      return isWorkspaceMember(workspaceId) && (role(workspaceId) == "owner" || role(workspaceId) == "manager");
-    }
-
-    function isManager(workspaceId) {
-      return isWorkspaceMember(workspaceId) && role(workspaceId) == "manager";
+    function isMember(groupId) {
+      return isSignedIn() && getRole(groupId) == 'member';
     }
 
     match /users/{uid} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
-    }
-
-    match /usernames/{username} {
-      allow read: if true;
-      allow write: if signedIn() && request.resource.data.uid == request.auth.uid;
-    }
-
-    match /{path=**}/members/{uid} {
-      allow read, list: if signedIn() && (resource == null || resource.data.uid == request.auth.uid);
-    }
-
-    match /entitlements/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
-      allow write: if false;
-    }
-
-    match /subscriptions/{subscriptionId} {
-      allow read: if signedIn() && resource.data.uid == request.auth.uid;
-      allow write: if false;
-    }
-
-    match /payments/{paymentId} {
-      allow read: if signedIn() && resource.data.uid == request.auth.uid;
-      allow write: if false;
-    }
-
-    match /userSessions/{uid}/sessions/{sessionId} {
-      allow read: if signedIn() && request.auth.uid == uid;
-      allow write: if false;
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
     match /groups/{groupId} {
-      allow read: if signedIn() && isWorkspaceMember(groupId); // Assuming group member check
-      // ... rest of rules
-
-      match /members/{uid} {
-        allow read: if signedIn() && isWorkspaceMember(workspaceId);
-        
-        // Workspace owner creates the first owner membership, or team members are created on non-free plan
-        allow create: if (
-          signedIn()
-          && uid == request.auth.uid
-          && get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.ownerUid == request.auth.uid
-          && request.resource.data.uid == uid
-          && request.resource.data.role == "owner"
-          && request.resource.data.status == "active"
-        ) || (
-          signedIn() && emailVerified() && isOwnerOrManager(workspaceId)
-          && (role(workspaceId) == "owner" || (role(workspaceId) == "manager" && request.resource.data.role == "member"))
-          && get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.plan != "free"
-        );
-
-        allow update: if signedIn() && isOwnerOrManager(workspaceId)
-          && (role(workspaceId) == "owner" && resource.data.role != "owner" && request.resource.data.role != "owner")
-          || (role(workspaceId) == "manager" && resource.data.role != "owner" && request.resource.data.role != "owner" && resource.data.role != "manager" && request.resource.data.role != "manager");
-          
-        allow delete: if signedIn() && isOwner(workspaceId) && resource.data.role != "owner";
-      }
-
-      match /repairs/{repairId} {
-        allow read: if signedIn() && isWorkspaceMember(workspaceId);
-        allow create: if signedIn() && emailVerified() && isWorkspaceMember(workspaceId) 
-          && request.resource.data.createdBy == request.auth.uid;
-        allow update: if isOwner(workspaceId)
-          || (isManager(workspaceId) && (
-               (resource.data.status != "done" || request.resource.data.status != "repairing") 
-               || (request.resource.data.statusNote != null && request.resource.data.statusNote != "")
-             ))
-          || (
-            isWorkspaceMember(workspaceId)
-            && role(workspaceId) == "member"
-            && resource.data.status != "done"
-            && resource.data.status != "cancelled"
-            && request.time < resource.data.createdAt + duration.value(3, "h")
-            && request.resource.data.statusUpdatedBy == request.auth.uid
-          );
-        allow delete: if signedIn() && isOwner(workspaceId);
-      }
+      allow read: if isSignedIn() && getMemberData(groupId) != null;
+      allow write: if isOwner(groupId); // Only owner can manage group settings
       
-      match /auditLogs/{logId} {
-        allow read: if signedIn() && isOwnerOrManager(workspaceId);
-        allow create: if signedIn() && isWorkspaceMember(workspaceId) && request.resource.data.actorUid == request.auth.uid;
-        allow update, delete: if false;
+      match /members/{uid} {
+        allow read: if isSignedIn() && getMemberData(groupId) != null;
+        allow create, update, delete: if isOwner(groupId) || (isManager(groupId) && request.resource.data.role == 'member');
       }
+
+      match /jobsheets/{jobsheetId} {
+        allow read: if isSignedIn() && getMemberData(groupId) != null && isSubscriptionActive(groupId);
+        allow create, update: if isSignedIn() && getMemberData(groupId) != null && isSubscriptionActive(groupId) && (isOwner(groupId) || isManager(groupId) || isMember(groupId));
+        allow delete: if isOwner(groupId);
+      }
+    }
+
+    match /subscriptions/{groupId} {
+      allow read: if isOwner(groupId);
+      allow write: if false; // Backend only
+    }
+
+    match /memberships/{membershipId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.uid;
+      allow write: if false; // Backend only
     }
   }
 }

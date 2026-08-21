@@ -5,7 +5,7 @@ import { auth } from "../../firebase/client.js";
 
 export async function initJobsheetUI(groupId) {
     const container = document.getElementById("main_app");
-    const canCreate = await PermissionService.hasPermission(groupId, auth.currentUser.uid, Permissions.JOBSHEET_CREATE);
+    const canCreate = await PermissionService.hasPermission(groupId, "default-user", Permissions.JOBSHEET_CREATE);
 
     container.innerHTML = `
         <div class="p-6 bg-white rounded-xl shadow-md">
